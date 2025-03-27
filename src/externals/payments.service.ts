@@ -55,7 +55,6 @@ export class PaymentService {
 
   async getUserTier(userUuid: string): Promise<Tier> {
     const isDevelopment = this.configService.get('isDevelopment');
-    console.log(userUuid);
 
     const jwtToken = jwt.sign(
       { payload: { uuid: userUuid, workspaces: { owners: [userUuid] } } },
