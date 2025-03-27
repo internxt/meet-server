@@ -5,6 +5,10 @@ import {
   SwaggerCustomOptions,
   SwaggerModule,
 } from '@nestjs/swagger';
+import configuration from './config/configuration';
+
+const config = configuration();
+const APP_PORT = config.port || 3000;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +29,7 @@ async function bootstrap() {
 
   SwaggerModule.setup('api', app, document, customOptions);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(APP_PORT ?? 3000);
 }
-bootstrap();
+
+bootstrap().catch(() => {});
