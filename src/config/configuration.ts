@@ -2,7 +2,7 @@ export default () => ({
   environment: process.env.NODE_ENV,
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
-  port: parseInt(process.env.PORT as string) || 3000,
+  port: parseInt(process.env.PORT) || 3000,
   apis: {
     payments: {
       url: process.env.PAYMENTS_URL,
