@@ -56,15 +56,4 @@ export class CallController {
       throw error;
     }
   }
-
-  @Post('/join')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Join a call if there are any seat available',
-  })
-  @ApiBearerAuth()
-  @ApiOkResponse({
-    description: 'Tries to join a call',
-  })
-  joinCall() {}
 }
