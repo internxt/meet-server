@@ -50,7 +50,7 @@ import { format } from 'sql-formatter';
           : (content: string) => {
               const parse = content.match(/^(Executing \(.*\):) (.*)$/);
               if (parse) {
-                const prettySql = format(parse[2]);
+                const prettySql = format(parse[2], { language: 'postgresql' });
                 Logger.debug(`${parse[1]}\n${prettySql}`);
               } else {
                 Logger.debug(`Could not parse sql content: ${content}`);
