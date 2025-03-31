@@ -12,5 +12,4 @@ RUN yarn build
 
 CMD yarn migrate && yarn start:dev
 
-EXPOSE 8083
 EXPOSE 3006
