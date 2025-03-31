@@ -5,9 +5,10 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('room_users', {
       id: {
-        type: Sequelize.INTEGER,
-        autoIncrement: true,
+        type: Sequelize.UUID,
         primaryKey: true,
+        allowNull: false,
+        defaultValue: Sequelize.UUIDV4,
       },
       room_id: {
         type: Sequelize.UUID,
@@ -20,7 +21,7 @@ module.exports = {
         onUpdate: 'CASCADE',
       },
       user_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
       },
       name: {
         type: Sequelize.STRING,
