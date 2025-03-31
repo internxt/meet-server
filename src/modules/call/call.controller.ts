@@ -39,7 +39,7 @@ export class CallController {
     const { uuid, email } = req.user as UserTokenData['payload'];
 
     if (!uuid)
-      throw new BadRequestException('The user uuid is needed to create a call');
+      throw new BadRequestException('The user id is needed to create a call');
 
     try {
       const userExists = await this.callService.createCall(uuid);
@@ -49,7 +49,7 @@ export class CallController {
       const err = error as Error;
 
       new Logger().error(
-        `[FILE/METADATA] ERROR: ${err.message}, CONTEXT ${JSON.stringify({
+        `[CALL/CREATE] ERROR: ${err.message}, CONTEXT ${JSON.stringify({
           user: { email, uuid },
         })} STACK: ${err.stack || 'NO STACK'}`,
       );
