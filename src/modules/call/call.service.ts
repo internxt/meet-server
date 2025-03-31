@@ -67,6 +67,6 @@ export class CallService {
       true,
     );
 
-    return { token, room: newRoom };
+    return { token, room: newRoom, paxPerCall: meetFeatures.paxPerCall };
   }
 }

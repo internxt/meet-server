@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
@@ -18,11 +19,15 @@ import {
 import { CallService } from './call.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { UserTokenData } from '../auth/dto/user.dto';
+import { RoomUseCase } from '../room/room.usecase';
 
 @ApiTags('Call')
 @Controller('call')
 export class CallController {
-  constructor(private readonly callService: CallService) {}
+  constructor(
+    private readonly callService: CallService,
+    private readonly roomUseCase: RoomUseCase,
+  ) {}
 
   @Post('/')
   @HttpCode(200)
@@ -44,6 +49,14 @@ export class CallController {
     try {
       const userExists = await this.callService.createCall(uuid);
 
+      const roomId = userExists.room;
+
+      await this.roomUseCase.createRoom({
+        id: roomId,
+        host_id: uuid,
+        max_users_allowed: userExists.paxPerCall,
+      });
+
       return userExists;
     } catch (error) {
       const err = error as Error;
@@ -53,7 +66,8 @@ export class CallController {
           user: { email, uuid },
         })} STACK: ${err.stack || 'NO STACK'}`,
       );
-      throw error;
+
+      return { message: err.stack };
     }
   }
 }
