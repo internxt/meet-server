@@ -8,12 +8,8 @@ import {
 import { CallService } from './call.service';
 import { RoomUseCase } from '../room/room.usecase';
 
-interface CreateCallParams {
-  uuid: string;
-  email: string;
-}
-
 export interface CallResponse {
+  token: string;
   room: string;
   paxPerCall: number;
 }
@@ -69,9 +65,7 @@ export class CallUseCase {
         { userId: uuid, email },
         err.stack,
       );
-      throw new InternalServerErrorException('Failed to create call and room', {
-        cause: err,
-      });
+      throw err;
     }
   }
 
