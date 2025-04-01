@@ -10,6 +10,7 @@ import { SequelizeRoomRepository } from '../room/room.repository';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { RoomModel } from '../room/models/room.model';
 import { RoomModule } from '../room/room.module';
+import { CallUseCase } from './call.usecase';
 
 @Module({
   controllers: [CallController],
@@ -19,6 +20,7 @@ import { RoomModule } from '../room/room.module';
     ConfigService,
     RoomUseCase,
     SequelizeRoomRepository,
+    CallUseCase,
   ],
   imports: [
     HttpClientModule,
