@@ -1,15 +1,17 @@
 import {
   Column,
+  CreatedAt,
   DataType,
   Model,
   PrimaryKey,
   Table,
+  UpdatedAt,
 } from 'sequelize-typescript';
 
 interface RoomModelAttributes {
   id: string;
-  max_users_allowed: number;
-  host_id: string;
+  maxUsersAllowed: number;
+  hostId: string;
 }
 
 @Table({ tableName: 'rooms', timestamps: true })
@@ -22,8 +24,14 @@ export class RoomModel extends Model<RoomModel> implements RoomModelAttributes {
   id: string;
 
   @Column(DataType.INTEGER)
-  max_users_allowed: number;
+  maxUsersAllowed: number;
 
   @Column(DataType.UUID)
-  host_id: string;
+  hostId: string;
+
+  @CreatedAt
+  createdAt: Date;
+
+  @UpdatedAt
+  updatedAt: Date;
 }

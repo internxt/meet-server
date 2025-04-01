@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { CallService } from './call.service';
 import { RoomUseCase } from '../room/room.usecase';
+import { Room } from '../room/room.domain';
 
 export interface CallResponse {
   token: string;
@@ -75,11 +76,13 @@ export class CallUseCase {
     email: string,
   ): Promise<void> {
     try {
-      await this.roomUseCase.createRoom({
-        id: call.room,
-        host_id: uuid,
-        max_users_allowed: call.paxPerCall,
-      });
+      await this.roomUseCase.createRoom(
+        new Room({
+          id: call.room,
+          hostId: uuid,
+          maxUsersAllowed: call.paxPerCall,
+        }),
+      );
     } catch (error) {
       const err = error as Error;
       this.logger.error(

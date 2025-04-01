@@ -32,10 +32,10 @@ export const createMockUserToken = (
 
 export const mockRoomData = {
   id: randomDataGenerator.guid(),
-  host_id: randomDataGenerator.guid(),
-  max_users_allowed: randomDataGenerator.integer({ min: 2, max: 10 }),
-  created_at: randomDataGenerator.date(),
-  updated_at: randomDataGenerator.date(),
+  hostId: randomDataGenerator.guid(),
+  maxUsersAllowed: randomDataGenerator.integer({ min: 2, max: 10 }),
+  createdAt: randomDataGenerator.date(),
+  updatedAt: randomDataGenerator.date(),
 };
 
 export const createMockRoom = (overrides?: Partial<RoomModel>) => ({
@@ -46,7 +46,7 @@ export const createMockRoom = (overrides?: Partial<RoomModel>) => ({
 export const mockCallResponse: CallResponse = {
   token: randomDataGenerator.string({ length: 32 }),
   room: mockRoomData.id,
-  paxPerCall: mockRoomData.max_users_allowed,
+  paxPerCall: mockRoomData.maxUsersAllowed,
 };
 
 export const createMockCallResponse = (overrides?: Partial<CallResponse>) => ({
