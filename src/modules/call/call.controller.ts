@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
@@ -47,7 +46,7 @@ export class CallController {
       throw new BadRequestException('The user id is needed to create a call');
 
     try {
-      const userExists = await this.callService.createCall(uuid);
+      const userExists = await this.callService.createCallToken(uuid);
 
       const roomId = userExists.room;
 
