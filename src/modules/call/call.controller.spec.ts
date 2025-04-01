@@ -36,7 +36,7 @@ describe('Testing Call Endpoints', () => {
         callController.createCall({
           user: createMockUserToken({
             payload: { ...createMockUserToken().payload, uuid: undefined },
-          }),
+          }).payload,
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -53,7 +53,7 @@ describe('Testing Call Endpoints', () => {
       callUseCase.createCallAndRoom.mockResolvedValueOnce(mockResponse);
 
       const result = await callController.createCall({
-        user: mockUserToken,
+        user: mockUserToken.payload,
       });
 
       expect(callUseCase.validateUserHasNoActiveRoom).toHaveBeenCalledWith(
@@ -74,7 +74,7 @@ describe('Testing Call Endpoints', () => {
 
       await expect(
         callController.createCall({
-          user: createMockUserToken(),
+          user: createMockUserToken().payload,
         }),
       ).rejects.toThrow(ConflictException);
     });
@@ -86,7 +86,7 @@ describe('Testing Call Endpoints', () => {
 
       await expect(
         callController.createCall({
-          user: createMockUserToken(),
+          user: createMockUserToken().payload,
         }),
       ).rejects.toThrow(InternalServerErrorException);
     });

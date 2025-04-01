@@ -20,14 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { CallUseCase, CallResponse } from './call.usecase';
-
+import { UserTokenData } from '../auth/dto/user.dto';
 interface RequestWithUser {
-  user?: {
-    payload: {
-      uuid?: string;
-      email?: string;
-    };
-  };
+  user?: UserTokenData['payload'];
 }
 
 @ApiTags('Call')
@@ -51,7 +46,8 @@ export class CallController {
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   @ApiConflictResponse({ description: 'Room already exists' })
   async createCall(@Request() req: RequestWithUser): Promise<CallResponse> {
-    const { uuid, email } = req.user?.payload || {};
+    console.log(req.user);
+    const { uuid, email } = req.user || {};
     if (!uuid) {
       this.logger.warn(
         `Attempt to create call without UUID for user: ${email}`,
