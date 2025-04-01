@@ -10,13 +10,17 @@ export class RoomUseCase {
     return this.roomRepository.create(data);
   }
 
-  async getRoom(id: RoomModel['id']) {
+  async getRoomByRoomId(id: RoomModel['id']) {
     return this.roomRepository.findById(id);
+  }
+
+  async getRoomByHostId(hostId: string) {
+    return await this.roomRepository.findByHostId(hostId);
   }
 
   async updateRoom(id: RoomModel['id'], data: Partial<RoomModel>) {
     await this.roomRepository.update(id, data);
-    return this.getRoom(id);
+    return this.getRoomByRoomId(id);
   }
 
   async removeRoom(id: string) {

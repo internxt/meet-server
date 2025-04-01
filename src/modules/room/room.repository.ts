@@ -17,6 +17,10 @@ export class SequelizeRoomRepository {
     return this.roomModel.findByPk(id);
   }
 
+  findByHostId(hostId: string) {
+    return this.roomModel.findOne({ where: { host_id: hostId } });
+  }
+
   update(id: RoomModel['id'], data: Partial<RoomModel>) {
     return this.roomModel.update(data, { where: { id } });
   }

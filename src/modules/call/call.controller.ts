@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
+  ConflictException,
   Controller,
   HttpCode,
+  InternalServerErrorException,
   Logger,
   Post,
   Request,
@@ -14,19 +15,27 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiInternalServerErrorResponse,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
-import { CallService } from './call.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
-import { UserTokenData } from '../auth/dto/user.dto';
-import { RoomUseCase } from '../room/room.usecase';
+import { CallUseCase, CallResponse } from './call.usecase';
+
+interface RequestWithUser {
+  user?: {
+    payload: {
+      uuid?: string;
+      email?: string;
+    };
+  };
+}
 
 @ApiTags('Call')
 @Controller('call')
 export class CallController {
-  constructor(
-    private readonly callService: CallService,
-    private readonly roomUseCase: RoomUseCase,
-  ) {}
+  private readonly logger = new Logger(CallController.name);
+
+  constructor(private readonly callUseCase: CallUseCase) {}
 
   @Post('/')
   @HttpCode(200)
@@ -39,34 +48,45 @@ export class CallController {
     description: 'Creates a Jitsi token and returns it to create the call',
   })
   @ApiBadRequestResponse({ description: "The user can't create a call" })
-  async createCall(@Request() req) {
-    const { uuid, email } = req.user as UserTokenData['payload'];
-
-    if (!uuid)
+  @ApiInternalServerErrorResponse({ description: 'Internal server error' })
+  @ApiConflictResponse({ description: 'Room already exists' })
+  async createCall(@Request() req: RequestWithUser): Promise<CallResponse> {
+    const { uuid, email } = req.user?.payload || {};
+    if (!uuid) {
+      this.logger.warn(
+        `Attempt to create call without UUID for user: ${email}`,
+      );
       throw new BadRequestException('The user id is needed to create a call');
+    }
 
     try {
-      const userExists = await this.callService.createCallToken(uuid);
-
-      const roomId = userExists.room;
-
-      await this.roomUseCase.createRoom({
-        id: roomId,
-        host_id: uuid,
-        max_users_allowed: userExists.paxPerCall,
-      });
-
-      return userExists;
+      await this.callUseCase.validateUserHasNoActiveRoom(uuid, email);
+      const call = await this.callUseCase.createCallAndRoom(uuid, email);
+      return call;
     } catch (error) {
       const err = error as Error;
-
-      new Logger().error(
-        `[CALL/CREATE] ERROR: ${err.message}, CONTEXT ${JSON.stringify({
-          user: { email, uuid },
-        })} STACK: ${err.stack || 'NO STACK'}`,
+      this.logger.error(
+        `Failed to create call: ${err.message}`,
+        {
+          userId: uuid,
+          email: email,
+          error: err.name,
+        },
+        err.stack,
       );
 
-      return { message: err.stack };
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while creating the call',
+        { cause: err.stack ?? err.message },
+      );
     }
   }
 }
