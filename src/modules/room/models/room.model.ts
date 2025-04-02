@@ -14,7 +14,7 @@ interface RoomModelAttributes {
   hostId: string;
 }
 
-@Table({ tableName: 'rooms', timestamps: true })
+@Table({ tableName: 'rooms', timestamps: true, underscored: true })
 export class RoomModel extends Model<RoomModel> implements RoomModelAttributes {
   @PrimaryKey
   @Column({

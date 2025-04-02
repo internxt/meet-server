@@ -21,9 +21,7 @@ import {
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { CallUseCase, CallResponse } from './call.usecase';
 import { UserTokenData } from '../auth/dto/user.dto';
-interface RequestWithUser {
-  user?: UserTokenData['payload'];
-}
+import { User } from '../auth/decorators/user.decorator';
 
 @ApiTags('Call')
 @Controller('call')
@@ -45,9 +43,11 @@ export class CallController {
   @ApiBadRequestResponse({ description: "The user can't create a call" })
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   @ApiConflictResponse({ description: 'Room already exists' })
-  async createCall(@Request() req: RequestWithUser): Promise<CallResponse> {
-    console.log(req.user);
-    const { uuid, email } = req.user || {};
+  async createCall(
+    @User() user: UserTokenData['payload'],
+  ): Promise<CallResponse> {
+    console.log(user);
+    const { uuid, email } = user || {};
     if (!uuid) {
       this.logger.warn(
         `Attempt to create call without UUID for user: ${email}`,
