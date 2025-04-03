@@ -1,4 +1,4 @@
-import { createParamDecorator, ExecutionContext, Logger } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { UserTokenData } from '../dto/user.dto';
 import { Request } from 'express';
 
@@ -6,27 +6,22 @@ interface RequestWithUser extends Request {
   user: UserTokenData['payload'];
 }
 
-const logger = new Logger('UserDecorator');
+export const userFactory = (
+  data: keyof UserTokenData['payload'] | undefined,
+  ctx: ExecutionContext,
+) => {
+  const request = ctx.switchToHttp().getRequest<RequestWithUser>();
+  const user = request.user;
 
-export const User = createParamDecorator(
-  (data: keyof UserTokenData['payload'] | undefined, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest<RequestWithUser>();
-    logger.debug(
-      `Extracting user from request: ${request.user ? 'User found' : 'No user in request'}`,
-    );
+  if (!user) {
+    return null;
+  }
 
-    const user = request.user;
+  if (data) {
+    return user?.[data];
+  }
 
-    if (!user) {
-      logger.warn('User not found in request');
-      return null;
-    }
+  return user;
+};
 
-    if (data) {
-      logger.debug(`Extracting specific property from user: ${data}`);
-      return user?.[data];
-    }
-
-    return user;
-  },
-);
+export const User = createParamDecorator(userFactory);
