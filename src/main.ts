@@ -6,12 +6,19 @@ import {
   SwaggerModule,
 } from '@nestjs/swagger';
 import configuration from './config/configuration';
+import helmet from 'helmet';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 const config = configuration();
 const APP_PORT = config.port || 3000;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.enableCors();
+  app.use(helmet());
+  app.disable('x-powered-by');
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Meet API')
     .setDescription('Meet API')
