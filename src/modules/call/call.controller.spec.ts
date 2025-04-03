@@ -33,11 +33,11 @@ describe('Testing Call Endpoints', () => {
   describe('Creating a call', () => {
     it('When the user id is not provided (uuid), then an error indicating so is thrown', async () => {
       await expect(
-        callController.createCall({
-          user: createMockUserToken({
+        callController.createCall(
+          createMockUserToken({
             payload: { ...createMockUserToken().payload, uuid: undefined },
           }).payload,
-        }),
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -52,9 +52,7 @@ describe('Testing Call Endpoints', () => {
       callUseCase.validateUserHasNoActiveRoom.mockResolvedValueOnce(undefined);
       callUseCase.createCallAndRoom.mockResolvedValueOnce(mockResponse);
 
-      const result = await callController.createCall({
-        user: mockUserToken.payload,
-      });
+      const result = await callController.createCall(mockUserToken.payload);
 
       expect(callUseCase.validateUserHasNoActiveRoom).toHaveBeenCalledWith(
         mockUserToken.payload.uuid,
@@ -68,26 +66,26 @@ describe('Testing Call Endpoints', () => {
     });
 
     it('When the room already exists, then an error indicating so is thrown', async () => {
+      const mockUserToken = createMockUserToken();
+
       callUseCase.validateUserHasNoActiveRoom.mockRejectedValueOnce(
         new ConflictException('User already has an active room as host'),
       );
 
       await expect(
-        callController.createCall({
-          user: createMockUserToken().payload,
-        }),
+        callController.createCall(mockUserToken.payload),
       ).rejects.toThrow(ConflictException);
     });
 
     it('When an unexpected error occurs, then an error indicating so is thrown', async () => {
+      const mockUserToken = createMockUserToken();
+
       callUseCase.validateUserHasNoActiveRoom.mockRejectedValueOnce(
         new Error('Unexpected error'),
       );
 
       await expect(
-        callController.createCall({
-          user: createMockUserToken().payload,
-        }),
+        callController.createCall(mockUserToken.payload),
       ).rejects.toThrow(InternalServerErrorException);
     });
   });

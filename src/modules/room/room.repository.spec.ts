@@ -34,9 +34,9 @@ describe('SequelizeRoomRepository', () => {
         .spyOn(roomModel, 'create')
         .mockResolvedValueOnce(mockRoom);
 
-      const result = await roomRepository.create(mockRoomData);
+      const result = await roomRepository.create(mockRoom);
 
-      expect(createRoomSpy).toHaveBeenCalledWith(mockRoomData);
+      expect(createRoomSpy).toHaveBeenCalledWith(mockRoom);
       expect(result).toEqual(mockRoom);
     });
   });
@@ -73,10 +73,10 @@ describe('SequelizeRoomRepository', () => {
         .spyOn(roomModel, 'findOne')
         .mockResolvedValueOnce(mockRoom);
 
-      const result = await roomRepository.findByHostId(mockRoomData.host_id);
+      const result = await roomRepository.findByHostId(mockRoomData.hostId);
 
       expect(findRoomByHostIdSpy).toHaveBeenCalledWith({
-        where: { host_id: mockRoomData.host_id },
+        where: { hostId: mockRoomData.hostId },
       });
       expect(result).toEqual(mockRoom);
     });
@@ -86,10 +86,10 @@ describe('SequelizeRoomRepository', () => {
         .spyOn(roomModel, 'findOne')
         .mockResolvedValueOnce(null);
 
-      const result = await roomRepository.findByHostId(mockRoomData.host_id);
+      const result = await roomRepository.findByHostId(mockRoomData.hostId);
 
       expect(findRoomByHostIdSpy).toHaveBeenCalledWith({
-        where: { host_id: mockRoomData.host_id },
+        where: { hostId: mockRoomData.hostId },
       });
       expect(result).toBeNull();
     });
@@ -97,7 +97,7 @@ describe('SequelizeRoomRepository', () => {
 
   describe('Update Room', () => {
     const mockUpdateData = {
-      max_users_allowed: 10,
+      maxUsersAllowed: 10,
     };
 
     it('When the room exists in the DB, then it is updated successfully', async () => {

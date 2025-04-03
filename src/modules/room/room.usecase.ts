@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { SequelizeRoomRepository } from './room.repository';
-import { RoomModel } from './models/room.model';
+import { Room, RoomAttributes } from './room.domain';
 
 @Injectable()
 export class RoomUseCase {
   constructor(private readonly roomRepository: SequelizeRoomRepository) {}
 
-  async createRoom(data: Partial<RoomModel>) {
+  async createRoom(data: Room) {
     return this.roomRepository.create(data);
   }
 
-  async getRoomByRoomId(id: RoomModel['id']) {
+  async getRoomByRoomId(id: RoomAttributes['id']) {
     return this.roomRepository.findById(id);
   }
 
@@ -18,7 +18,7 @@ export class RoomUseCase {
     return await this.roomRepository.findByHostId(hostId);
   }
 
-  async updateRoom(id: RoomModel['id'], data: Partial<RoomModel>) {
+  async updateRoom(id: RoomAttributes['id'], data: Partial<RoomAttributes>) {
     await this.roomRepository.update(id, data);
     return this.getRoomByRoomId(id);
   }

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import { OmitCreateProperties } from 'src/types/OmitCreateProperties';
+import { Room, RoomAttributes } from './room.domain';
 import { RoomModel } from './models/room.model';
 
 @Injectable()
@@ -9,23 +11,29 @@ export class SequelizeRoomRepository {
     private readonly roomModel: typeof RoomModel,
   ) {}
 
-  create(data: Partial<RoomModel>) {
-    return this.roomModel.create(data);
+  async create(data: OmitCreateProperties<Room>): Promise<Room> {
+    const room = await this.roomModel.create(data);
+    return Room.build(room);
   }
 
-  findById(id: RoomModel['id']) {
-    return this.roomModel.findByPk(id);
+  async findById(id: RoomAttributes['id']): Promise<Room | null> {
+    const room = await this.roomModel.findByPk(id);
+    return room ? Room.build(room) : null;
   }
 
-  findByHostId(hostId: string) {
-    return this.roomModel.findOne({ where: { host_id: hostId } });
+  async findByHostId(hostId: string): Promise<Room | null> {
+    const room = await this.roomModel.findOne({ where: { hostId } });
+    return room ? Room.build(room) : null;
   }
 
-  update(id: RoomModel['id'], data: Partial<RoomModel>) {
-    return this.roomModel.update(data, { where: { id } });
+  async update(
+    id: RoomAttributes['id'],
+    data: Partial<RoomAttributes>,
+  ): Promise<void> {
+    await this.roomModel.update(data, { where: { id } });
   }
 
-  delete(id: RoomModel['id']) {
-    return this.roomModel.destroy({ where: { id } });
+  async delete(id: RoomAttributes['id']): Promise<void> {
+    await this.roomModel.destroy({ where: { id } });
   }
 }
