@@ -6,8 +6,9 @@ import {
   InternalServerErrorException,
   Logger,
   Post,
-  Request,
   UseGuards,
+  Param,
+  Body,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -17,11 +18,15 @@ import {
   ApiTags,
   ApiInternalServerErrorResponse,
   ApiConflictResponse,
+  ApiParam,
+  ApiBody,
+  ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { CallUseCase, CallResponse } from './call.usecase';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { User } from '../auth/decorators/user.decorator';
+import { JoinCallDto, JoinCallResponse } from './dto/join-call.dto';
 
 @ApiTags('Call')
 @Controller('call')
@@ -84,5 +89,46 @@ export class CallController {
         { cause: err.stack ?? err.message },
       );
     }
+  }
+
+  @Post('/:id/users/join')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Join an existing call',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: 'Call/Room ID' })
+  @ApiBody({ type: JoinCallDto })
+  @ApiOkResponse({
+    description: 'Successfully joined the call',
+    schema: {
+      properties: {
+        token: { type: 'string' },
+        room: { type: 'string' },
+        userId: { type: 'string' },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Failed to join call, room is full or invalid request',
+  })
+  @ApiNotFoundResponse({ description: 'Call/Room not found' })
+  @ApiConflictResponse({ description: 'User is already in this room' })
+  @ApiInternalServerErrorResponse({ description: 'Internal server error' })
+  async joinCall(
+    @Param('id') roomId: string,
+    @Body() joinCallDto: JoinCallDto,
+    @User() user: UserTokenData['payload'],
+  ): Promise<JoinCallResponse> {
+    const { uuid } = user || {};
+    const { anonymous, name, lastName } = joinCallDto;
+
+    return await this.callUseCase.joinCall(roomId, {
+      userId: uuid,
+      name,
+      lastName,
+      anonymous,
+    });
   }
 }
