@@ -25,7 +25,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node_version }}
-      - run: echo REACT_APP_NODE_ENV=development >> .env
+      - run: echo NODE_ENV=test >> ./.env.test
+      - run: echo PORT=3006 >> ./.env.test
+      - run: echo PAYMENTS_URL=http://payments-api:8003 >> ./.env.test
+      - run: echo JWT_SECRET=jwt-secret >> ./.env.test
+      - run: echo JITSI_SECRET=jitsi-secret-base64 >> ./.env.test
+      - run: echo JITSI_APP_ID=jitsi-app-id >> ./.env.test
+      - run: echo JITSI_API_KEY=jitsi-api-key >> ./.env.test
+      - run: echo DB_NAME=xMeet >> ./.env.test
+      - run: echo DB_HOSTNAME=meet-database >> ./.env.test
+      - run: echo DB_USERNAME=postgres >> ./.env.test
+      - run: echo DB_PASSWORD=example >> ./.env.test
+      - run: echo DB_PORT=5434 >> ./.env.test
 
       - name: Install
         run: yarn install

@@ -1,12 +1,12 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { v4 } from 'uuid';
-import { PaymentService, Tier } from 'src/externals/payments.service';
+import { PaymentService, Tier } from '../../externals/payments.service';
 import jwt, { JwtHeader } from 'jsonwebtoken';
 import {
   getJitsiJWTHeader,
   getJitsiJWTPayload,
   getJitsiJWTSecret,
-} from 'src/lib/jitsi';
+} from '../../lib/jitsi';
 
 export function SignWithRS256AndHeader(
   payload: object,
@@ -48,7 +48,7 @@ export class CallService {
     return meetFeature;
   }
 
-  async createCall(userUuid: string) {
+  async createCallToken(userUuid: string) {
     const meetFeatures = await this.getMeetFeatureConfigForUser(userUuid);
 
     if (!meetFeatures.enabled)

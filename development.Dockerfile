@@ -8,7 +8,7 @@ COPY yarn.lock ./
 RUN yarn
 COPY . ./
 
-RUN yarn build
+RUN rm -rf dist && yarn build
 
 CMD yarn migrate && yarn start:dev
 

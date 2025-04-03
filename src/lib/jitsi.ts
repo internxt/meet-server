@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { JwtHeader } from 'jsonwebtoken';
-import configuration from 'src/config/configuration';
+import configuration from '../config/configuration';
 import { v4 } from 'uuid';
 
 export const getJitsiJWTSecret = () => {
-  return Buffer.from(configuration().secrets.jitsiSecret, 'base64').toString(
-    'utf8',
-  );
+  const jitsiSecret = configuration().secrets.jitsiSecret;
+
+  return Buffer.from(jitsiSecret, 'base64').toString('utf8');
 };
 
 export const getJitsiJWTPayload = (

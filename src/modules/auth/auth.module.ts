@@ -5,10 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './auth.strategy';
 
 @Module({
-  imports: [
-    PassportModule,
-    JwtModule.register({}), // puedes registrar opciones si necesitas firmar tokens aquí
-  ],
+  imports: [PassportModule, JwtModule.register({})],
   providers: [JwtStrategy],
   exports: [],
 })

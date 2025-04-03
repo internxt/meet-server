@@ -1,4 +1,3 @@
-// src/room/room.module.ts
 import { Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { RoomModel } from './models/room.model';
