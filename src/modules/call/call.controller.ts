@@ -118,17 +118,16 @@ export class CallController {
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   async joinCall(
     @Param('id') roomId: string,
-    @Body() joinCallDto: JoinCallDto,
     @User() user: UserTokenData['payload'],
+    @Body() joinCallDto?: JoinCallDto,
   ): Promise<JoinCallResponse> {
     const { uuid } = user || {};
-    const { anonymous, name, lastName } = joinCallDto;
 
     return await this.callUseCase.joinCall(roomId, {
       userId: uuid,
-      name,
-      lastName,
-      anonymous,
+      name: joinCallDto?.name,
+      lastName: joinCallDto?.lastName,
+      anonymous: joinCallDto?.anonymous,
     });
   }
 }
