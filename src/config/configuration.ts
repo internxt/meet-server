@@ -45,4 +45,11 @@ export default () => ({
       },
     },
   },
+  avatar: {
+    endpoint: process.env.AVATAR_S3_ENDPOINT,
+    region: process.env.AVATAR_S3_REGION,
+    accessKey: process.env.AVATAR_S3_ACCESS_KEY,
+    secretKey: process.env.AVATAR_S3_SECRET_KEY,
+    bucket: process.env.AVATAR_S3_BUCKET,
+  },
 });
