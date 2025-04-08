@@ -10,11 +10,13 @@ import {
 } from '@nestjs/common';
 import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
 import { Room } from '../room/room.domain';
+import { RoomUserUseCase } from '../room/room-user.usecase';
 
 describe('CallUseCase', () => {
   let callUseCase: CallUseCase;
   let callService: CallService;
   let roomUseCase: RoomUseCase;
+  let roomUserUseCase: RoomUserUseCase;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,12 +35,19 @@ describe('CallUseCase', () => {
             createRoom: jest.fn(),
           },
         },
+        {
+          provide: RoomUserUseCase,
+          useValue: {
+            addUserToRoom: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     callUseCase = module.get<CallUseCase>(CallUseCase);
     callService = module.get<CallService>(CallService);
     roomUseCase = module.get<RoomUseCase>(RoomUseCase);
+    roomUserUseCase = module.get<RoomUserUseCase>(RoomUserUseCase);
   });
 
   describe('validateUserHasNoActiveRoom', () => {
