@@ -69,4 +69,22 @@ export class CallService {
 
     return { token, room: newRoom, paxPerCall: meetFeatures.paxPerCall };
   }
+
+  createCallTokenForParticipant(
+    userId: string,
+    roomId: string,
+    isAnonymous: boolean,
+  ) {
+    const token = generateJitsiJWT(
+      {
+        id: userId,
+        email: isAnonymous ? 'anonymous@inxt.com' : 'user@inxt.com',
+        name: isAnonymous ? 'Anonymous' : 'User',
+      },
+      roomId,
+      false,
+    );
+
+    return token;
+  }
 }

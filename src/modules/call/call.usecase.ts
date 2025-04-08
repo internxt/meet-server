@@ -4,10 +4,14 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { CallService } from './call.service';
 import { RoomUseCase } from '../room/room.usecase';
 import { Room } from '../room/room.domain';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { JoinCallResponse } from './dto/join-call.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface CallResponse {
   token: string;
@@ -22,6 +26,7 @@ export class CallUseCase {
   constructor(
     private readonly callService: CallService,
     private readonly roomUseCase: RoomUseCase,
+    private readonly roomUserUseCase: RoomUserUseCase,
   ) {}
 
   async validateUserHasNoActiveRoom(
@@ -123,5 +128,97 @@ export class CallUseCase {
       'An unexpected error occurred while creating the call',
       { cause: err },
     );
+  }
+
+  async joinCall(
+    roomId: string,
+    userData: {
+      userId?: string;
+      name?: string;
+      lastName?: string;
+      anonymous?: boolean;
+    },
+  ): Promise<JoinCallResponse> {
+    try {
+      const room = await this.roomUseCase.getRoomByRoomId(roomId);
+      if (!room) {
+        throw new NotFoundException(`Specified room not found`);
+      }
+
+      const processedUserData = this.processUserData(userData);
+
+      const roomUser = await this.roomUserUseCase.addUserToRoom(
+        roomId,
+        processedUserData,
+      );
+
+      // Generate token for the user
+      const token = this.callService.createCallTokenForParticipant(
+        roomUser.userId,
+        roomId,
+        !!roomUser.anonymous,
+      );
+
+      return {
+        token,
+        room: roomId,
+        userId: roomUser.userId,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof NotFoundException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+
+      const err = error as Error;
+      this.logger.error(
+        `Failed to join call: ${err.message}`,
+        {
+          roomId,
+          userData,
+          error: err.name,
+        },
+        err.stack,
+      );
+
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while joining the call',
+        { cause: err },
+      );
+    }
+  }
+
+  private processUserData(userData: {
+    userId?: string;
+    name?: string;
+    lastName?: string;
+    anonymous?: boolean;
+  }): {
+    userId: string;
+    name?: string;
+    lastName?: string;
+    anonymous: boolean;
+  } {
+    const { userId, name, lastName, anonymous = false } = userData;
+
+    if (anonymous || !userId) {
+      return {
+        userId: uuidv4(),
+        name,
+        lastName,
+        anonymous: true,
+      };
+    }
+
+    return {
+      userId,
+      name,
+      lastName,
+      anonymous: false,
+    };
   }
 }
