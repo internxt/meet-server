@@ -6,15 +6,18 @@ import * as jwt from 'jsonwebtoken';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import configuration from '../../config/configuration';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 
 jest.mock('uuid');
 jest.mock('jsonwebtoken');
 
 describe('Call service', () => {
   let callService: CallService;
-  let paymentService: PaymentService;
+  let paymentService: DeepMocked<PaymentService>;
 
   beforeEach(async () => {
+    paymentService = createMock<PaymentService>();
+
     const module = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -26,16 +29,13 @@ describe('Call service', () => {
       providers: [
         {
           provide: PaymentService,
-          useValue: {
-            getUserTier: jest.fn(),
-          },
+          useValue: paymentService,
         },
         CallService,
       ],
     }).compile();
 
     callService = module.get<CallService>(CallService);
-    paymentService = module.get<PaymentService>(PaymentService);
   });
 
   it('When the user has meet enabled, then a call token should be created', async () => {
@@ -81,5 +81,43 @@ describe('Call service', () => {
     );
 
     expect(getUserTierSpy).toHaveBeenCalledWith('user-123');
+  });
+
+  describe('createCallTokenForParticipant', () => {
+    it('should create a token for a registered user', () => {
+      const userId = 'test-user-id';
+      const roomId = 'test-room-id';
+      const isAnonymous = false;
+      const expectedToken = 'test-participant-token';
+
+      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
+
+      const result = callService.createCallTokenForParticipant(
+        userId,
+        roomId,
+        isAnonymous,
+      );
+
+      expect(result).toBe(expectedToken);
+      expect(jwt.sign).toHaveBeenCalled();
+    });
+
+    it('should create a token for an anonymous user', () => {
+      const userId = 'anonymous-user-id';
+      const roomId = 'test-room-id';
+      const isAnonymous = true;
+      const expectedToken = 'test-anonymous-token';
+
+      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
+
+      const result = callService.createCallTokenForParticipant(
+        userId,
+        roomId,
+        isAnonymous,
+      );
+
+      expect(result).toBe(expectedToken);
+      expect(jwt.sign).toHaveBeenCalled();
+    });
   });
 });
