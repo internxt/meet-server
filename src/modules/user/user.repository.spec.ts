@@ -6,7 +6,6 @@ import { getModelToken } from '@nestjs/sequelize';
 import { User } from './user.domain';
 import { Op } from 'sequelize';
 import { createMockUser } from './fixtures';
-import { v4 } from 'uuid';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -33,27 +32,45 @@ describe('UserService', () => {
       const mockUser = createMockUser();
       const findOneSpy = jest
         .spyOn(userModel, 'findOne')
-        .mockResolvedValueOnce(mockUser as UserModel);
+        .mockResolvedValueOnce(mockUser as unknown as UserModel);
 
       const result = await userService.findByUuid(mockUser.uuid);
 
       expect(findOneSpy).toHaveBeenCalledWith({
         where: { uuid: mockUser.uuid },
+        attributes: [
+          'id',
+          'uuid',
+          'name',
+          'lastname',
+          'email',
+          'username',
+          'avatar',
+        ],
       });
       expect(result).toBeInstanceOf(User);
       expect(result.uuid).toEqual(mockUser.uuid);
     });
 
     it('should return null when user is not found by UUID', async () => {
-      const mockUser = createMockUser();
+      const uuid = 'non-existent-uuid';
       const findOneSpy = jest
         .spyOn(userModel, 'findOne')
         .mockResolvedValueOnce(null);
 
-      const result = await userService.findByUuid(mockUser.uuid);
+      const result = await userService.findByUuid(uuid);
 
       expect(findOneSpy).toHaveBeenCalledWith({
-        where: { uuid: mockUser.uuid },
+        where: { uuid },
+        attributes: [
+          'id',
+          'uuid',
+          'name',
+          'lastname',
+          'email',
+          'username',
+          'avatar',
+        ],
       });
       expect(result).toBeNull();
     });
@@ -68,14 +85,23 @@ describe('UserService', () => {
       const findAllSpy = jest
         .spyOn(userModel, 'findAll')
         .mockResolvedValueOnce([
-          mockUser1 as UserModel,
-          mockUser2 as UserModel,
+          mockUser1 as unknown as UserModel,
+          mockUser2 as unknown as UserModel,
         ]);
 
       const result = await userService.findManyByUuid(uuids);
 
       expect(findAllSpy).toHaveBeenCalledWith({
         where: { uuid: { [Op.in]: uuids } },
+        attributes: [
+          'id',
+          'uuid',
+          'name',
+          'lastname',
+          'email',
+          'username',
+          'avatar',
+        ],
       });
 
       expect(result).toHaveLength(2);
@@ -86,7 +112,7 @@ describe('UserService', () => {
     });
 
     it('should return empty array when no users are found by UUIDs', async () => {
-      const uuids = [v4(), v4()];
+      const uuids = ['uuid1', 'uuid2'];
       const findAllSpy = jest
         .spyOn(userModel, 'findAll')
         .mockResolvedValueOnce([]);
@@ -95,8 +121,28 @@ describe('UserService', () => {
 
       expect(findAllSpy).toHaveBeenCalledWith({
         where: { uuid: { [Op.in]: uuids } },
+        attributes: [
+          'id',
+          'uuid',
+          'name',
+          'lastname',
+          'email',
+          'username',
+          'avatar',
+        ],
       });
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('toDomain', () => {
+    it('should convert UserModel to User domain object', () => {
+      const mockUser = createMockUser();
+
+      const result = userService.toDomain(mockUser as unknown as UserModel);
+
+      expect(result).toBeInstanceOf(User);
+      expect(result.uuid).toEqual(mockUser.uuid);
     });
   });
 });

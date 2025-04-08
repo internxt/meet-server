@@ -15,14 +15,42 @@ export class UserService {
   ) {}
 
   async findByUuid(uuid: UserAttributes['uuid']): Promise<User | null> {
-    const user = await this.userModel.findOne({ where: { uuid } });
-    return user ? User.build(user) : null;
+    const user = await this.userModel.findOne({
+      where: { uuid },
+      attributes: [
+        'id',
+        'uuid',
+        'name',
+        'lastname',
+        'email',
+        'username',
+        'avatar',
+      ],
+    });
+
+    return user ? this.toDomain(user) : null;
   }
 
   async findManyByUuid(uuids: UserAttributes['uuid'][]): Promise<User[]> {
     const users = await this.userModel.findAll({
       where: { uuid: { [Op.in]: uuids } },
+      attributes: [
+        'id',
+        'uuid',
+        'name',
+        'lastname',
+        'email',
+        'username',
+        'avatar',
+      ],
     });
-    return users.map((user) => User.build(user));
+
+    return users.map((user) => this.toDomain(user));
+  }
+
+  toDomain(model: UserModel): User {
+    return User.build({
+      ...model.toJSON(),
+    });
   }
 }
