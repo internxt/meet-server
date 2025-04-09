@@ -45,6 +45,14 @@ export default () => ({
       },
     },
   },
+  driveDatabase: {
+    host: process.env.DRIVE_DB_HOSTNAME,
+    port: parseInt(process.env.DRIVE_DB_PORT) || 5432,
+    debug: process.env.DRIVE_DB_DEBUG === 'true' || false,
+    username: process.env.DRIVE_DB_USERNAME,
+    password: process.env.DRIVE_DB_PASSWORD,
+    database: process.env.DRIVE_DB_NAME,
+  },
   avatar: {
     endpoint: process.env.AVATAR_S3_ENDPOINT,
     region: process.env.AVATAR_S3_REGION,
