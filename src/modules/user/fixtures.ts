@@ -26,9 +26,5 @@ export const createMockUser = (overrides?: Partial<UserAttributes>): User => {
 
   Object.assign(user, overrides);
 
-  if (!user.toJSON) {
-    user.toJSON = jest.fn(() => ({ ...user }));
-  }
-
   return user;
 };
