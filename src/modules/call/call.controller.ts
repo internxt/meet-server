@@ -9,6 +9,7 @@ import {
   UseGuards,
   Param,
   Body,
+  Get,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -27,13 +28,17 @@ import { CallUseCase, CallResponse } from './call.usecase';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { User } from '../auth/decorators/user.decorator';
 import { JoinCallDto, JoinCallResponse } from './dto/join-call.dto';
-
+import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
+import { RoomUserUseCase } from '../room/room-user.usecase';
 @ApiTags('Call')
 @Controller('call')
 export class CallController {
   private readonly logger = new Logger(CallController.name);
 
-  constructor(private readonly callUseCase: CallUseCase) {}
+  constructor(
+    private readonly callUseCase: CallUseCase,
+    private readonly roomUserUseCase: RoomUserUseCase,
+  ) {}
 
   @Post('/')
   @HttpCode(200)
@@ -129,5 +134,22 @@ export class CallController {
       lastName: joinCallDto?.lastName,
       anonymous: joinCallDto?.anonymous,
     });
+  }
+
+  @Get('/:id/users')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get users in a call',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: 'Call/Room ID' })
+  @ApiOkResponse({
+    description: 'Successfully got users in a call',
+  })
+  @ApiNotFoundResponse({ description: 'Call/Room not found' })
+  @ApiInternalServerErrorResponse({ description: 'Internal server error' })
+  getUsersInCall(@Param('id') roomId: string): Promise<UsersInRoomDto[]> {
+    return this.roomUserUseCase.getUsersInRoom(roomId);
   }
 }

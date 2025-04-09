@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { createMock } from '@golevelup/ts-jest';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CallController } from './call.controller';
 import { CallUseCase } from './call.usecase';
@@ -10,25 +10,32 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createMockUserToken } from './fixtures';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
-  let callUseCase: jest.Mocked<CallUseCase>;
+  let callUseCase: DeepMocked<CallUseCase>;
+  let roomUserUseCase: DeepMocked<RoomUserUseCase>;
 
   beforeEach(async () => {
-    callUseCase = createMock<CallUseCase>();
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CallController],
       providers: [
         {
           provide: CallUseCase,
-          useValue: callUseCase,
+          useValue: createMock<CallUseCase>(),
+        },
+        {
+          provide: RoomUserUseCase,
+          useValue: createMock<RoomUserUseCase>(),
         },
       ],
     }).compile();
 
     callController = module.get<CallController>(CallController);
+    callUseCase = module.get<DeepMocked<CallUseCase>>(CallUseCase);
+    roomUserUseCase = module.get<DeepMocked<RoomUserUseCase>>(RoomUserUseCase);
   });
 
   describe('Creating a call', () => {
@@ -224,6 +231,69 @@ describe('Testing Call Endpoints', () => {
         anonymous: undefined,
       });
       expect(result).toEqual(mockJoinCallResponse);
+    });
+  });
+
+  describe('Getting users in a call', () => {
+    const roomId = 'test-room-id';
+
+    it('When getting users in a call successfully, it should return the users list', async () => {
+      const mockUsers: UsersInRoomDto[] = [
+        {
+          id: 'user-id-1',
+          name: 'Test User 1',
+          lastName: 'Last Name 1',
+          anonymous: false,
+          avatar: 'avatar-url-1',
+        },
+        {
+          id: 'user-id-2',
+          name: 'Test User 2',
+          lastName: 'Last Name 2',
+          anonymous: false,
+          avatar: 'avatar-url-2',
+        },
+      ];
+
+      roomUserUseCase.getUsersInRoom.mockResolvedValueOnce(mockUsers);
+
+      const result = await callController.getUsersInCall(roomId);
+
+      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(result).toEqual(mockUsers);
+      expect(result.length).toBe(2);
+    });
+
+    it('When the room is not found, it should propagate NotFoundException', async () => {
+      roomUserUseCase.getUsersInRoom.mockRejectedValueOnce(
+        new NotFoundException('Specified room not found'),
+      );
+
+      await expect(callController.getUsersInCall(roomId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(roomId);
+    });
+
+    it('When an unexpected error occurs, it should propagate the error', async () => {
+      roomUserUseCase.getUsersInRoom.mockRejectedValueOnce(
+        new Error('Unexpected error'),
+      );
+
+      await expect(callController.getUsersInCall(roomId)).rejects.toThrow(
+        Error,
+      );
+      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(roomId);
+    });
+
+    it('When no users are in the room, it should return an empty array', async () => {
+      roomUserUseCase.getUsersInRoom.mockResolvedValueOnce([]);
+
+      const result = await callController.getUsersInCall(roomId);
+
+      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
     });
   });
 });

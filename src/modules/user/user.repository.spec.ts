@@ -1,14 +1,14 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserService } from './user.repository';
+import { UserRepository } from './user.repository';
 import { UserModel } from '../../models/user.model';
 import { getModelToken } from '@nestjs/sequelize';
 import { User } from './user.domain';
 import { Op } from 'sequelize';
 import { createMockUser } from './fixtures';
 
-describe('UserService', () => {
-  let userService: UserService;
+describe('UserRepository', () => {
+  let userRepository: UserRepository;
   let userModel: DeepMocked<typeof UserModel>;
 
   beforeEach(async () => {
@@ -16,7 +16,7 @@ describe('UserService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        UserService,
+        UserRepository,
         {
           provide: getModelToken(UserModel, 'drive'),
           useValue: userModel,
@@ -24,7 +24,7 @@ describe('UserService', () => {
       ],
     }).compile();
 
-    userService = module.get<UserService>(UserService);
+    userRepository = module.get<UserRepository>(UserRepository);
   });
 
   describe('findByUuid', () => {
@@ -34,7 +34,7 @@ describe('UserService', () => {
         .spyOn(userModel, 'findOne')
         .mockResolvedValueOnce(mockUser as unknown as UserModel);
 
-      const result = await userService.findByUuid(mockUser.uuid);
+      const result = await userRepository.findByUuid(mockUser.uuid);
 
       expect(findOneSpy).toHaveBeenCalledWith({
         where: { uuid: mockUser.uuid },
@@ -58,7 +58,7 @@ describe('UserService', () => {
         .spyOn(userModel, 'findOne')
         .mockResolvedValueOnce(null);
 
-      const result = await userService.findByUuid(uuid);
+      const result = await userRepository.findByUuid(uuid);
 
       expect(findOneSpy).toHaveBeenCalledWith({
         where: { uuid },
@@ -89,7 +89,7 @@ describe('UserService', () => {
           mockUser2 as unknown as UserModel,
         ]);
 
-      const result = await userService.findManyByUuid(uuids);
+      const result = await userRepository.findManyByUuid(uuids);
 
       expect(findAllSpy).toHaveBeenCalledWith({
         where: { uuid: { [Op.in]: uuids } },
@@ -117,7 +117,7 @@ describe('UserService', () => {
         .spyOn(userModel, 'findAll')
         .mockResolvedValueOnce([]);
 
-      const result = await userService.findManyByUuid(uuids);
+      const result = await userRepository.findManyByUuid(uuids);
 
       expect(findAllSpy).toHaveBeenCalledWith({
         where: { uuid: { [Op.in]: uuids } },
@@ -139,7 +139,7 @@ describe('UserService', () => {
     it('should convert UserModel to User domain object', () => {
       const mockUser = createMockUser();
 
-      const result = userService.toDomain(mockUser as unknown as UserModel);
+      const result = userRepository.toDomain(mockUser as unknown as UserModel);
 
       expect(result).toBeInstanceOf(User);
       expect(result.uuid).toEqual(mockUser.uuid);

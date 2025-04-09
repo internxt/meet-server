@@ -8,12 +8,18 @@ import { SequelizeRoomUserRepository } from './room-user.repository';
 import { RoomUser } from './room-user.domain';
 import { v4 as uuidv4 } from 'uuid';
 import { RoomUseCase } from './room.usecase';
+import { UsersInRoomDto } from './dto/users-in-room.dto';
+import { UserRepository } from '../user/user.repository';
+import { AvatarService } from '../../externals/avatar/avatar.service';
+import { User } from '../user/user.domain';
 
 @Injectable()
 export class RoomUserUseCase {
   constructor(
     private readonly roomUserRepository: SequelizeRoomUserRepository,
     private readonly roomUseCase: RoomUseCase,
+    private readonly userRepository: UserRepository,
+    private readonly avatarService: AvatarService,
   ) {}
 
   async addUserToRoom(
@@ -61,13 +67,48 @@ export class RoomUserUseCase {
     });
   }
 
-  async getUsersInRoom(roomId: string): Promise<RoomUser[]> {
+  async getUsersInRoom(roomId: string): Promise<UsersInRoomDto[]> {
+    const room = await this.getRoomOrThrow(roomId);
+    const roomUsers = await this.roomUserRepository.findAllByRoomId(room.id);
+    const users = await this.getUsersByRoomUsers(roomUsers);
+    const userAvatars = await this.getUserAvatars(users);
+
+    return roomUsers.map((roomUser) => ({
+      id: roomUser.userId,
+      name: roomUser.name,
+      lastName: roomUser.lastName,
+      anonymous: roomUser.anonymous,
+      avatar: userAvatars.get(roomUser.userId),
+    }));
+  }
+
+  private async getRoomOrThrow(roomId: string) {
     const room = await this.roomUseCase.getRoomByRoomId(roomId);
     if (!room) {
       throw new NotFoundException(`Specified room not found`);
     }
+    return room;
+  }
 
-    return this.roomUserRepository.findAllByRoomId(roomId);
+  private async getUsersByRoomUsers(roomUsers: RoomUser[]): Promise<User[]> {
+    return this.userRepository.findManyByUuid(
+      roomUsers.map((roomUser) => roomUser.userId),
+    );
+  }
+
+  private async getUserAvatars(users: User[]): Promise<Map<string, string>> {
+    const userAvatars = new Map<string, string>();
+
+    await Promise.all(
+      users.map(async (user) => {
+        if (user.avatar) {
+          const avatar = await this.avatarService.getDownloadUrl(user.avatar);
+          userAvatars.set(user.uuid, avatar);
+        }
+      }),
+    );
+
+    return userAvatars;
   }
 
   async countUsersInRoom(roomId: string): Promise<number> {
