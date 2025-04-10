@@ -30,6 +30,7 @@ import { User } from '../auth/decorators/user.decorator';
 import { JoinCallDto, JoinCallResponse } from './dto/join-call.dto';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
 import { RoomUserUseCase } from '../room/room-user.usecase';
+import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
 @ApiTags('Call')
 @Controller('call')
 export class CallController {
@@ -98,7 +99,7 @@ export class CallController {
 
   @Post('/:id/users/join')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
+  @OptionalAuth()
   @ApiOperation({
     summary: 'Join an existing call',
   })
@@ -132,13 +133,13 @@ export class CallController {
       userId: uuid,
       name: joinCallDto?.name,
       lastName: joinCallDto?.lastName,
-      anonymous: joinCallDto?.anonymous,
+      anonymous: joinCallDto?.anonymous || !user,
     });
   }
 
   @Get('/:id/users')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
+  @OptionalAuth()
   @ApiOperation({
     summary: 'Get users in a call',
   })
