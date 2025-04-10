@@ -2,30 +2,7 @@ import { ExecutionContext } from '@nestjs/common';
 import { createMock } from '@golevelup/ts-jest';
 import { mockUserPayload } from '../../call/fixtures';
 import { UserTokenData } from '../dto/user.dto';
-import { Request } from 'express';
 import { userFactory } from './user.decorator';
-
-interface RequestWithUser extends Request {
-  user: UserTokenData['payload'];
-}
-
-function extractUser(
-  data: keyof UserTokenData['payload'] | undefined,
-  ctx: ExecutionContext,
-) {
-  const request = ctx.switchToHttp().getRequest<RequestWithUser>();
-  const user = request.user;
-
-  if (!user) {
-    return null;
-  }
-
-  if (data) {
-    return user?.[data];
-  }
-
-  return user;
-}
 
 describe('User Decorator', () => {
   let mockExecutionContext: ExecutionContext;
@@ -56,7 +33,7 @@ describe('User Decorator', () => {
     expect(usernameResult).toEqual(mockUser.username);
   });
 
-  it('should return null when user is not in request', () => {
+  it('should return null when user is not in request (anonymous user)', () => {
     const contextWithoutUser = createMock<ExecutionContext>({
       switchToHttp: () => ({
         getRequest: () => ({
@@ -66,6 +43,19 @@ describe('User Decorator', () => {
     });
 
     const result = userFactory(undefined, contextWithoutUser);
+    expect(result).toBeNull();
+  });
+
+  it('should return null when user is null (OptionalJwtAuthGuard scenario)', () => {
+    const contextWithNullUser = createMock<ExecutionContext>({
+      switchToHttp: () => ({
+        getRequest: () => ({
+          user: null,
+        }),
+      }),
+    });
+
+    const result = userFactory(undefined, contextWithNullUser);
     expect(result).toBeNull();
   });
 

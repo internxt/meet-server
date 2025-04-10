@@ -3,7 +3,7 @@ import { UserTokenData } from '../dto/user.dto';
 import { Request } from 'express';
 
 interface RequestWithUser extends Request {
-  user: UserTokenData['payload'];
+  user: UserTokenData['payload'] | null;
 }
 
 export const userFactory = (
