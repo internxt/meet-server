@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { UserModel } from '../../models/user.model';
 import { User } from './user.domain';
@@ -6,9 +6,7 @@ import { UserAttributes } from './user.attributes';
 import { Op } from 'sequelize';
 
 @Injectable()
-export class UserService {
-  private readonly logger = new Logger(UserService.name);
-
+export class UserRepository {
   constructor(
     @InjectModel(UserModel, 'drive')
     private readonly userModel: typeof UserModel,
