@@ -13,7 +13,7 @@ services:
       POSTGRES_DB: xMeet
       PGPORT: 5434
     networks:
-      - meet-network
+      - internxt
     ports:
       - 5434:5434
     healthcheck:
@@ -34,7 +34,7 @@ services:
     ports:
       - 3006:3006
     networks:
-      - meet-network
+      - internxt
     environment:
       NODE_ENV: development
     env_file:
@@ -44,5 +44,5 @@ services:
         condition: service_healthy
 
 networks:
-  meet-network:
-    name: meet-network
+  internxt:
+    name: internxt

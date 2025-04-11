@@ -57,7 +57,7 @@ export default () => ({
     accessKey: process.env.AVATAR_ACCESS_KEY,
     secretKey: process.env.AVATAR_SECRET_KEY,
     bucket: process.env.AVATAR_BUCKET,
-    region: process.env.AVATAR_REGION,
+    region: process.env.AVATAR_REGION || 'us-east-1',
     endpoint: process.env.AVATAR_ENDPOINT,
     endpointForSignedUrls: process.env.AVATAR_ENDPOINT_REWRITE_FOR_SIGNED_URLS,
     forcePathStyle: process.env.AVATAR_FORCE_PATH_STYLE || 'true',
