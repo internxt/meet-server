@@ -10,14 +10,9 @@ import { CallService } from './call.service';
 import { RoomUseCase } from '../room/room.usecase';
 import { Room } from '../room/room.domain';
 import { RoomUserUseCase } from '../room/room-user.usecase';
-import { JoinCallResponse } from './dto/join-call.dto';
+import { JoinCallResponseDto } from './dto/join-call.dto';
 import { v4 as uuidv4 } from 'uuid';
-
-export interface CallResponse {
-  token: string;
-  room: string;
-  paxPerCall: number;
-}
+import { CreateCallResponseDto } from './dto/create-call.dto';
 
 @Injectable()
 export class CallUseCase {
@@ -58,7 +53,10 @@ export class CallUseCase {
     }
   }
 
-  async createCallAndRoom(uuid: string, email: string): Promise<CallResponse> {
+  async createCallAndRoom(
+    uuid: string,
+    email: string,
+  ): Promise<CreateCallResponseDto> {
     try {
       const call = await this.callService.createCallToken(uuid);
       await this.createRoomForCall(call, uuid, email);
@@ -76,7 +74,7 @@ export class CallUseCase {
   }
 
   async createRoomForCall(
-    call: CallResponse,
+    call: CreateCallResponseDto,
     uuid: string,
     email: string,
   ): Promise<void> {
@@ -138,7 +136,7 @@ export class CallUseCase {
       lastName?: string;
       anonymous?: boolean;
     },
-  ): Promise<JoinCallResponse> {
+  ): Promise<JoinCallResponseDto> {
     try {
       const room = await this.roomUseCase.getRoomByRoomId(roomId);
       if (!room) {

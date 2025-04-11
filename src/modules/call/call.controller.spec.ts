@@ -12,7 +12,7 @@ import {
 import { createMockUserToken, mockUserPayload } from './fixtures';
 import { RoomUserUseCase } from '../room/room-user.usecase';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
-import { JoinCallDto, JoinCallResponse } from './dto/join-call.dto';
+import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
@@ -25,7 +25,7 @@ describe('Testing Call Endpoints', () => {
     lastName: 'Smith',
     anonymous: false,
   };
-  const mockJoinCallResponse: JoinCallResponse = {
+  const mockJoinCallResponse: JoinCallResponseDto = {
     token: 'mock-token',
     room: mockRoomId,
     userId: 'user-id',

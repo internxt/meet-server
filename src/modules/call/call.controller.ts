@@ -24,10 +24,11 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
-import { CallUseCase, CallResponse } from './call.usecase';
+import { CallUseCase } from './call.usecase';
+import { CreateCallResponseDto } from './dto/create-call.dto';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { User } from '../auth/decorators/user.decorator';
-import { JoinCallDto, JoinCallResponse } from './dto/join-call.dto';
+import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
 import { RoomUserUseCase } from '../room/room-user.usecase';
 import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
@@ -50,14 +51,14 @@ export class CallController {
   @ApiBearerAuth()
   @ApiOkResponse({
     description: 'Creates a Jitsi token and returns it to create the call',
+    type: CreateCallResponseDto,
   })
   @ApiBadRequestResponse({ description: "The user can't create a call" })
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   @ApiConflictResponse({ description: 'Room already exists' })
   async createCall(
     @User() user: UserTokenData['payload'],
-  ): Promise<CallResponse> {
-    console.log(user);
+  ): Promise<CreateCallResponseDto> {
     const { uuid, email } = user || {};
     if (!uuid) {
       this.logger.warn(
@@ -108,13 +109,7 @@ export class CallController {
   @ApiBody({ type: JoinCallDto })
   @ApiOkResponse({
     description: 'Successfully joined the call',
-    schema: {
-      properties: {
-        token: { type: 'string' },
-        room: { type: 'string' },
-        userId: { type: 'string' },
-      },
-    },
+    type: JoinCallResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'Failed to join call, room is full or invalid request',
@@ -126,7 +121,7 @@ export class CallController {
     @Param('id') roomId: string,
     @User() user: UserTokenData['payload'],
     @Body() joinCallDto?: JoinCallDto,
-  ): Promise<JoinCallResponse> {
+  ): Promise<JoinCallResponseDto> {
     const { uuid } = user || {};
 
     return await this.callUseCase.joinCall(roomId, {
@@ -147,6 +142,8 @@ export class CallController {
   @ApiParam({ name: 'id', description: 'Call/Room ID' })
   @ApiOkResponse({
     description: 'Successfully got users in a call',
+    type: UsersInRoomDto,
+    isArray: true,
   })
   @ApiNotFoundResponse({ description: 'Call/Room not found' })
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })

@@ -1,7 +1,7 @@
 import { Chance } from 'chance';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { RoomModel } from '../room/models/room.model';
-import { CallResponse } from './call.usecase';
+import { CreateCallResponseDto } from './dto/create-call.dto';
 
 const randomDataGenerator = new Chance();
 
@@ -43,13 +43,15 @@ export const createMockRoom = (overrides?: Partial<RoomModel>) => ({
   ...overrides,
 });
 
-export const mockCallResponse: CallResponse = {
+export const mockCallResponse: CreateCallResponseDto = {
   token: randomDataGenerator.string({ length: 32 }),
   room: mockRoomData.id,
   paxPerCall: mockRoomData.maxUsersAllowed,
 };
 
-export const createMockCallResponse = (overrides?: Partial<CallResponse>) => ({
+export const createMockCallResponse = (
+  overrides?: Partial<CreateCallResponseDto>,
+) => ({
   ...mockCallResponse,
   ...overrides,
 });
