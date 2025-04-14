@@ -1,7 +1,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRepository } from './user.repository';
-import { UserModel } from '../../models/user.model';
+import { UserModel } from './models/user.model';
 import { getModelToken } from '@nestjs/sequelize';
 import { User } from './user.domain';
 import { Op } from 'sequelize';

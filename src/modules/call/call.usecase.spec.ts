@@ -315,6 +315,21 @@ describe('CallUseCase', () => {
       });
     });
 
+    it('should successfully join a call as host and open the room', async () => {
+      const userData = { userId: roomMock.hostId };
+      roomMock.isClosed = true;
+      jest
+        .spyOn(roomUseCase, 'getRoomByRoomId')
+        .mockResolvedValueOnce(roomMock);
+      const openRoomSpy = jest
+        .spyOn(roomUseCase, 'openRoom')
+        .mockResolvedValueOnce();
+
+      await callUseCase.joinCall(roomId, userData);
+
+      expect(openRoomSpy).toHaveBeenCalledWith(roomId);
+    });
+
     it('should throw NotFoundException when room does not exist', async () => {
       const userData = { userId };
       const getRoomByRoomIdSpy = jest
@@ -485,6 +500,41 @@ describe('CallUseCase', () => {
           anonymous: true,
         }),
       );
+    });
+  });
+
+  describe('leaveCall', () => {
+    it('should successfully leave a call as host and close the room', async () => {
+      const roomId = 'test-room-id';
+      const userId = 'test-user-id';
+      const roomMock = createMock<Room>(mockRoomData);
+      roomMock.hostId = userId;
+      roomMock.isClosed = true;
+
+      jest
+        .spyOn(roomUseCase, 'getRoomByRoomId')
+        .mockResolvedValueOnce(roomMock);
+      const closeRoomSpy = jest
+        .spyOn(roomUseCase, 'closeRoom')
+        .mockResolvedValueOnce();
+
+      await callUseCase.leaveCall(roomId, userId);
+
+      expect(closeRoomSpy).toHaveBeenCalledWith(roomId);
+    });
+
+    it('should throw NotFoundException when room does not exist', async () => {
+      const roomId = 'test-room-id';
+      const userId = 'test-user-id';
+      const getRoomByRoomIdSpy = jest
+        .spyOn(roomUseCase, 'getRoomByRoomId')
+        .mockResolvedValueOnce(null);
+
+      await expect(callUseCase.leaveCall(roomId, userId)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
     });
   });
 });

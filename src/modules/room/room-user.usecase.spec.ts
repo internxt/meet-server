@@ -466,18 +466,7 @@ describe('RoomUserUseCase', () => {
   });
 
   describe('Remove User From Room', () => {
-    it('When the room does not exist, then a NotFoundException is thrown', async () => {
-      const getRoomByRoomIdMock = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(null);
-
-      await expect(
-        roomUserUseCase.removeUserFromRoom('test-user-id', 'nonexistent-room'),
-      ).rejects.toThrow(NotFoundException);
-
-      expect(getRoomByRoomIdMock).toHaveBeenCalledWith('nonexistent-room');
-    });
-
+    const mockRoom = new Room(mockRoomData);
     it('When the room exists, then the user is removed from the room', async () => {
       jest
         .spyOn(roomUseCase, 'getRoomByRoomId')
@@ -486,7 +475,7 @@ describe('RoomUserUseCase', () => {
         .spyOn(roomUserRepository, 'deleteByUserIdAndRoomId')
         .mockResolvedValueOnce(undefined);
 
-      await roomUserUseCase.removeUserFromRoom('test-user-id', 'test-room-id');
+      await roomUserUseCase.removeUserFromRoom('test-user-id', mockRoom);
 
       expect(deleteByUserIdAndRoomIdMock).toHaveBeenCalledWith(
         'test-user-id',

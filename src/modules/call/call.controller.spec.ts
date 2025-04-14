@@ -308,4 +308,21 @@ describe('Testing Call Endpoints', () => {
       expect(result.length).toBe(0);
     });
   });
+
+  describe('Leaving a call', () => {
+    it('should leave a call for authenticated user', async () => {
+      callUseCase.leaveCall.mockResolvedValue();
+
+      const result = await callController.leaveCall(
+        mockRoomId,
+        mockUserPayload,
+      );
+
+      expect(result).toBeUndefined();
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(
+        mockRoomId,
+        mockUserPayload.uuid,
+      );
+    });
+  });
 });

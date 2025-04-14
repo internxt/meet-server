@@ -12,6 +12,7 @@ interface RoomModelAttributes {
   id: string;
   maxUsersAllowed: number;
   hostId: string;
+  isClosed: boolean;
 }
 
 @Table({ tableName: 'rooms', timestamps: true, underscored: true })
@@ -28,6 +29,9 @@ export class RoomModel extends Model<RoomModel> implements RoomModelAttributes {
 
   @Column(DataType.UUID)
   hostId: string;
+
+  @Column(DataType.BOOLEAN)
+  isClosed: boolean;
 
   @CreatedAt
   createdAt: Date;

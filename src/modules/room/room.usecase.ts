@@ -26,4 +26,12 @@ export class RoomUseCase {
   async removeRoom(id: string) {
     return this.roomRepository.delete(id);
   }
+
+  async closeRoom(id: string) {
+    return this.roomRepository.update(id, { isClosed: true });
+  }
+
+  async openRoom(id: string) {
+    return this.roomRepository.update(id, { isClosed: false });
+  }
 }

@@ -12,6 +12,7 @@ import { UsersInRoomDto } from './dto/users-in-room.dto';
 import { UserRepository } from '../user/user.repository';
 import { AvatarService } from '../../externals/avatar/avatar.service';
 import { User } from '../user/user.domain';
+import { Room } from './room.domain';
 
 @Injectable()
 export class RoomUserUseCase {
@@ -120,12 +121,7 @@ export class RoomUserUseCase {
     return this.roomUserRepository.countByRoomId(roomId);
   }
 
-  async removeUserFromRoom(userId: string, roomId: string): Promise<void> {
-    const room = await this.roomUseCase.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
-    }
-
-    await this.roomUserRepository.deleteByUserIdAndRoomId(userId, roomId);
+  async removeUserFromRoom(userId: string, room: Room): Promise<void> {
+    await this.roomUserRepository.deleteByUserIdAndRoomId(userId, room.id);
   }
 }

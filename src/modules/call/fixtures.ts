@@ -2,6 +2,7 @@ import { Chance } from 'chance';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { RoomModel } from '../room/models/room.model';
 import { CreateCallResponseDto } from './dto/create-call.dto';
+import { Room } from '../room/room.domain';
 
 const randomDataGenerator = new Chance();
 
@@ -34,13 +35,15 @@ export const mockRoomData = {
   id: randomDataGenerator.guid(),
   hostId: randomDataGenerator.guid(),
   maxUsersAllowed: randomDataGenerator.integer({ min: 2, max: 10 }),
+  isClosed: false,
   createdAt: randomDataGenerator.date(),
   updatedAt: randomDataGenerator.date(),
 };
 
-export const createMockRoom = (overrides?: Partial<RoomModel>) => ({
+export const createMockRoom = (overrides?: Partial<Room>): Room => ({
   ...mockRoomData,
   ...overrides,
+  toJSON: () => mockRoomData,
 });
 
 export const mockCallResponse: CreateCallResponseDto = {

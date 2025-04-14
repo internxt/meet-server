@@ -150,4 +150,29 @@ export class CallController {
   getUsersInCall(@Param('id') roomId: string): Promise<UsersInRoomDto[]> {
     return this.roomUserUseCase.getUsersInRoom(roomId);
   }
+
+  @Post('/:id/users/leave')
+  @HttpCode(200)
+  @OptionalAuth()
+  @ApiOperation({
+    summary: 'Leave a call',
+    description: `Allows a user to leave a call. If the user is not in the call, the operation is idempotent and still returns 200 OK. The response body is empty.`,
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: 'Call/Room ID' })
+  @ApiOkResponse({
+    description:
+      'Successfully left the call or user was not in the call (idempotent). Response body is empty.',
+    type: undefined,
+    schema: { example: undefined },
+  })
+  @ApiNotFoundResponse({ description: 'Call/Room not found' })
+  @ApiInternalServerErrorResponse({ description: 'Internal server error' })
+  leaveCall(
+    @Param('id') roomId: string,
+    @User() user: UserTokenData['payload'],
+  ): Promise<void> {
+    const { uuid } = user || {};
+    return this.callUseCase.leaveCall(roomId, uuid);
+  }
 }
