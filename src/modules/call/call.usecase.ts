@@ -157,6 +157,10 @@ export class CallUseCase {
         !!roomUser.anonymous,
       );
 
+      if (processedUserData.userId === room.hostId && room.isClosed) {
+        await this.roomUseCase.openRoom(roomId);
+      }
+
       return {
         token,
         room: roomId,
@@ -218,5 +222,18 @@ export class CallUseCase {
       lastName,
       anonymous: false,
     };
+  }
+
+  async leaveCall(roomId: string, userId: string): Promise<void> {
+    const room = await this.roomUseCase.getRoomByRoomId(roomId);
+    if (!room) {
+      throw new NotFoundException(`Specified room not found`);
+    }
+
+    if (room.hostId === userId) {
+      await this.roomUseCase.closeRoom(roomId);
+    }
+
+    await this.roomUserUseCase.removeUserFromRoom(userId, room);
   }
 }

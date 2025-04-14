@@ -132,4 +132,26 @@ describe('Room Use Cases', () => {
       expect(deleteRoomSpy).toHaveBeenCalledWith(mockRoomData.id);
     });
   });
+
+  describe('closeRoom', () => {
+    it('should set isClosed to true', async () => {
+      const updateSpy = jest
+        .spyOn(roomRepository, 'update')
+        .mockResolvedValueOnce();
+      const roomId = mockRoomData.id;
+      await roomUseCase.closeRoom(roomId);
+      expect(updateSpy).toHaveBeenCalledWith(roomId, { isClosed: true });
+    });
+  });
+
+  describe('openRoom', () => {
+    it('should set isClosed to false', async () => {
+      const updateSpy = jest
+        .spyOn(roomRepository, 'update')
+        .mockResolvedValueOnce();
+      const roomId = mockRoomData.id;
+      await roomUseCase.openRoom(roomId);
+      expect(updateSpy).toHaveBeenCalledWith(roomId, { isClosed: false });
+    });
+  });
 });
