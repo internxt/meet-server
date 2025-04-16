@@ -96,8 +96,7 @@ describe('Testing Call Endpoints', () => {
         mockUserToken.payload.email,
       );
       expect(callUseCase.createCallAndRoom).toHaveBeenCalledWith(
-        mockUserToken.payload.uuid,
-        mockUserToken.payload.email,
+        mockUserToken.payload,
       );
       expect(result).toEqual(mockResponse);
     });

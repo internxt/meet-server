@@ -7,6 +7,7 @@ import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import configuration from '../../config/configuration';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { mockUserPayload } from './fixtures';
 
 jest.mock('uuid');
 jest.mock('jsonwebtoken');
@@ -39,6 +40,7 @@ describe('Call service', () => {
   });
 
   it('When the user has meet enabled, then a call token should be created', async () => {
+    const userPayload = mockUserPayload;
     const getUserTierSpy = jest
       .spyOn(paymentService, 'getUserTier')
       .mockResolvedValue({
@@ -53,7 +55,7 @@ describe('Call service', () => {
     (uuid.v4 as jest.Mock).mockReturnValue('test-room-id');
     (jwt.sign as jest.Mock).mockReturnValue('test-jitsi-token');
 
-    const result = await callService.createCallToken('user-123');
+    const result = await callService.createCallToken(userPayload);
 
     expect(result).toEqual({
       token: 'test-jitsi-token',
@@ -61,10 +63,11 @@ describe('Call service', () => {
       paxPerCall: 10,
     });
 
-    expect(getUserTierSpy).toHaveBeenCalledWith('user-123');
+    expect(getUserTierSpy).toHaveBeenCalledWith(userPayload.uuid);
   });
 
   it('When the user does not have meet enabled, then an error indicating so is thrown', async () => {
+    const userPayload = mockUserPayload;
     const getUserTierSpy = jest
       .spyOn(paymentService, 'getUserTier')
       .mockResolvedValue({
@@ -76,16 +79,17 @@ describe('Call service', () => {
         },
       } as Tier);
 
-    await expect(callService.createCallToken('user-123')).rejects.toThrow(
+    await expect(callService.createCallToken(userPayload)).rejects.toThrow(
       UnauthorizedException,
     );
 
-    expect(getUserTierSpy).toHaveBeenCalledWith('user-123');
+    expect(getUserTierSpy).toHaveBeenCalledWith(userPayload.uuid);
   });
 
   describe('createCallTokenForParticipant', () => {
     it('should create a token for a registered user', () => {
-      const userId = 'test-user-id';
+      const userPayload = mockUserPayload;
+      const userId = userPayload.uuid;
       const roomId = 'test-room-id';
       const isAnonymous = false;
       const expectedToken = 'test-participant-token';
@@ -96,6 +100,7 @@ describe('Call service', () => {
         userId,
         roomId,
         isAnonymous,
+        userPayload,
       );
 
       expect(result).toBe(expectedToken);

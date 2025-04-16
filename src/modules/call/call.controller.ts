@@ -69,7 +69,7 @@ export class CallController {
 
     try {
       await this.callUseCase.validateUserHasNoActiveRoom(uuid, email);
-      const call = await this.callUseCase.createCallAndRoom(uuid, email);
+      const call = await this.callUseCase.createCallAndRoom(user);
       return call;
     } catch (error) {
       const err = error as Error;

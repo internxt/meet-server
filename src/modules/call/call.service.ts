@@ -7,6 +7,8 @@ import {
   getJitsiJWTPayload,
   getJitsiJWTSecret,
 } from '../../lib/jitsi';
+import { User } from '../user/user.domain';
+import { UserTokenData } from '../auth/dto/user.dto';
 
 export function SignWithRS256AndHeader(
   payload: object,
@@ -48,8 +50,8 @@ export class CallService {
     return meetFeature;
   }
 
-  async createCallToken(userUuid: string) {
-    const meetFeatures = await this.getMeetFeatureConfigForUser(userUuid);
+  async createCallToken(user: User | UserTokenData['payload']) {
+    const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
 
     if (!meetFeatures.enabled)
       throw new UnauthorizedException(
@@ -59,9 +61,9 @@ export class CallService {
     const newRoom = v4();
     const token = generateJitsiJWT(
       {
-        id: userUuid,
-        email: 'example@inxt.com',
-        name: 'Example',
+        id: user.uuid,
+        email: user.email,
+        name: `${user.name} ${user.lastname}`,
       },
       newRoom,
       true,
@@ -74,12 +76,13 @@ export class CallService {
     userId: string,
     roomId: string,
     isAnonymous: boolean,
+    user?: User | UserTokenData['payload'],
   ) {
     const token = generateJitsiJWT(
       {
         id: userId,
-        email: isAnonymous ? 'anonymous@inxt.com' : 'user@inxt.com',
-        name: isAnonymous ? 'Anonymous' : 'User',
+        email: isAnonymous ? 'anonymous@inxt.com' : user.email,
+        name: isAnonymous ? 'Anonymous' : `${user.name} ${user.lastname}`,
       },
       roomId,
       false,

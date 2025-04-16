@@ -13,6 +13,8 @@ import { RoomUserUseCase } from '../room/room-user.usecase';
 import { JoinCallResponseDto } from './dto/join-call.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateCallResponseDto } from './dto/create-call.dto';
+import { User } from '../user/user.domain';
+import { UserTokenData } from '../auth/dto/user.dto';
 
 @Injectable()
 export class CallUseCase {
@@ -54,19 +56,18 @@ export class CallUseCase {
   }
 
   async createCallAndRoom(
-    uuid: string,
-    email: string,
+    user: User | UserTokenData['payload'],
   ): Promise<CreateCallResponseDto> {
     try {
-      const call = await this.callService.createCallToken(uuid);
-      await this.createRoomForCall(call, uuid, email);
-      this.logger.log(`Successfully created call for user: ${email}`);
+      const call = await this.callService.createCallToken(user);
+      await this.createRoomForCall(call, user.uuid, user.email);
+      this.logger.log(`Successfully created call for user: ${user.email}`);
       return call;
     } catch (error) {
       const err = error as Error;
       this.logger.error(
         `Failed to create call and room: ${err.message}`,
-        { userId: uuid, email },
+        { userId: user.uuid, email: user.email },
         err.stack,
       );
       throw err;
