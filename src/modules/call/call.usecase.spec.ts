@@ -504,37 +504,116 @@ describe('CallUseCase', () => {
   });
 
   describe('leaveCall', () => {
-    it('should successfully leave a call as host and close the room', async () => {
-      const roomId = 'test-room-id';
-      const userId = 'test-user-id';
-      const roomMock = createMock<Room>(mockRoomData);
-      roomMock.hostId = userId;
-      roomMock.isClosed = true;
+    const roomId = 'test-room-id';
+    const hostId = 'host-user-id';
+    const participantId = 'participant-user-id';
+    let roomMock: DeepMocked<Room>;
 
-      jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(roomMock);
-      const closeRoomSpy = jest
-        .spyOn(roomUseCase, 'closeRoom')
-        .mockResolvedValueOnce();
-
-      await callUseCase.leaveCall(roomId, userId);
-
-      expect(closeRoomSpy).toHaveBeenCalledWith(roomId);
+    beforeEach(() => {
+      roomMock = createMock<Room>({ ...mockRoomData, id: roomId, hostId });
+      roomUseCase.getRoomByRoomId.mockResolvedValue(roomMock);
+      roomUserUseCase.removeUserFromRoom.mockResolvedValue();
+      roomUseCase.closeRoom.mockResolvedValue();
+      roomUseCase.removeRoom.mockResolvedValue();
     });
 
     it('should throw NotFoundException when room does not exist', async () => {
-      const roomId = 'test-room-id';
-      const userId = 'test-user-id';
-      const getRoomByRoomIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(null);
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(null);
 
-      await expect(callUseCase.leaveCall(roomId, userId)).rejects.toThrow(
-        NotFoundException,
+      await expect(
+        callUseCase.leaveCall(roomId, participantId),
+      ).rejects.toThrow(NotFoundException);
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).not.toHaveBeenCalled();
+      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
+      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+    });
+
+    it('should remove user and close room when host leaves a non-empty room', async () => {
+      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
+
+      await callUseCase.leaveCall(roomId, hostId);
+
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+        hostId,
+        roomMock,
       );
+      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.closeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+    });
 
-      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
+    it('should remove user and delete room when the last user (host) leaves', async () => {
+      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(0);
+
+      await callUseCase.leaveCall(roomId, hostId);
+
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+        hostId,
+        roomMock,
+      );
+      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.removeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
+    });
+
+    it('should remove user and delete room when the last user (participant) leaves', async () => {
+      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(0);
+
+      await callUseCase.leaveCall(roomId, participantId);
+
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+        participantId,
+        roomMock,
+      );
+      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.removeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
+    });
+
+    it('should remove user but not close or delete room when a participant leaves a non-empty room', async () => {
+      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(2);
+
+      await callUseCase.leaveCall(roomId, participantId);
+
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+        participantId,
+        roomMock,
+      );
+      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
+      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+    });
+
+    it('should successfully leave a call as host and close the room', async () => {
+      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
+      roomMock.hostId = hostId;
+
+      await callUseCase.leaveCall(roomId, hostId);
+
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+        hostId,
+        roomMock,
+      );
+      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.closeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when room does not exist', async () => {
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(null);
+
+      await expect(
+        callUseCase.leaveCall(roomId, participantId),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomUserUseCase.removeUserFromRoom).not.toHaveBeenCalled();
     });
   });
 });
