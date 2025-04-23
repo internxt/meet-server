@@ -230,10 +230,16 @@ export class CallUseCase {
       throw new NotFoundException(`Specified room not found`);
     }
 
-    if (room.hostId === userId) {
-      await this.roomUseCase.closeRoom(roomId);
-    }
+    const isHostLeaving = room.hostId === userId;
 
     await this.roomUserUseCase.removeUserFromRoom(userId, room);
+
+    const remainingUsers = await this.roomUserUseCase.countUsersInRoom(roomId);
+
+    if (remainingUsers === 0) {
+      await this.roomUseCase.removeRoom(roomId);
+    } else if (isHostLeaving) {
+      await this.roomUseCase.closeRoom(roomId);
+    }
   }
 }
