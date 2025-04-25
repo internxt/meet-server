@@ -48,8 +48,8 @@ describe('CallUseCase', () => {
 
   describe('validateUserHasNoActiveRoom', () => {
     it('should not throw when user has no active room', async () => {
-      const getRoomByHostIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByHostId')
+      const getOpenRoomByHostIdSpy = jest
+        .spyOn(roomUseCase, 'getOpenRoomByHostId')
         .mockResolvedValueOnce(null);
 
       await expect(
@@ -59,12 +59,12 @@ describe('CallUseCase', () => {
         ),
       ).resolves.not.toThrow();
 
-      expect(getRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
     });
 
     it('should throw ConflictException when user already has an active room', async () => {
-      const getRoomByHostIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByHostId')
+      const getOpenRoomByHostIdSpy = jest
+        .spyOn(roomUseCase, 'getOpenRoomByHostId')
         .mockResolvedValueOnce(createMock<Room>(mockRoomData));
 
       await expect(
@@ -74,12 +74,12 @@ describe('CallUseCase', () => {
         ),
       ).rejects.toThrow(ConflictException);
 
-      expect(getRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
     });
 
     it('should throw InternalServerErrorException when an unexpected error occurs', async () => {
-      const getRoomByHostIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByHostId')
+      const getOpenRoomByHostIdSpy = jest
+        .spyOn(roomUseCase, 'getOpenRoomByHostId')
         .mockRejectedValueOnce(new Error('Database error'));
 
       await expect(
@@ -89,7 +89,7 @@ describe('CallUseCase', () => {
         ),
       ).rejects.toThrow(InternalServerErrorException);
 
-      expect(getRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
     });
   });
 
