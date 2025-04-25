@@ -93,6 +93,22 @@ describe('SequelizeRoomRepository', () => {
       });
       expect(result).toBeNull();
     });
+
+    it('When the room exists in the DB by host id and additional where, then it is returned successfully', async () => {
+      const mockRoom = createMock<RoomModel>(mockRoomData);
+      const findRoomByHostIdSpy = jest
+        .spyOn(roomModel, 'findOne')
+        .mockResolvedValueOnce(mockRoom);
+
+      const result = await roomRepository.findByHostId(mockRoomData.hostId, {
+        isClosed: false,
+      });
+
+      expect(findRoomByHostIdSpy).toHaveBeenCalledWith({
+        where: { hostId: mockRoomData.hostId, isClosed: false },
+      });
+      expect(result).toEqual(mockRoom);
+    });
   });
 
   describe('Update Room', () => {

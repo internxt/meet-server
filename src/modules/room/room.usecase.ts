@@ -18,6 +18,12 @@ export class RoomUseCase {
     return await this.roomRepository.findByHostId(hostId);
   }
 
+  async getOpenRoomByHostId(hostId: string) {
+    return await this.roomRepository.findByHostId(hostId, {
+      isClosed: false,
+    });
+  }
+
   async updateRoom(id: RoomAttributes['id'], data: Partial<RoomAttributes>) {
     await this.roomRepository.update(id, data);
     return this.getRoomByRoomId(id);
