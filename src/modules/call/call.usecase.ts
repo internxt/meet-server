@@ -29,7 +29,7 @@ export class CallUseCase {
     email: string,
   ): Promise<void> {
     try {
-      const existingRoom = await this.roomUseCase.getRoomByHostId(uuid);
+      const existingRoom = await this.roomUseCase.getOpenRoomByHostId(uuid);
       if (existingRoom) {
         this.logger.warn(
           `User ${email} already has an active room as host: ${existingRoom.id}`,

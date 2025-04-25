@@ -18,6 +18,7 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
-    "allowJs": false
+    "allowJs": false,
+    "useUnknownInCatchVariables": false
   }
 }

@@ -21,8 +21,13 @@ export class SequelizeRoomRepository {
     return room ? Room.build(room) : null;
   }
 
-  async findByHostId(hostId: string): Promise<Room | null> {
-    const room = await this.roomModel.findOne({ where: { hostId } });
+  async findByHostId(
+    hostId: string,
+    additionalWhere?: Partial<RoomAttributes>,
+  ): Promise<Room | null> {
+    const room = await this.roomModel.findOne({
+      where: { hostId, ...additionalWhere },
+    });
     return room ? Room.build(room) : null;
   }
 
