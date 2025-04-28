@@ -154,4 +154,33 @@ describe('Room Use Cases', () => {
       expect(updateSpy).toHaveBeenCalledWith(roomId, { isClosed: false });
     });
   });
+
+  describe('getOpenRoomByHostId', () => {
+    it('should return room when found', async () => {
+      const mockRoom = createMock<Room>(mockRoomData);
+      const findRoomByHostIdSpy = jest
+        .spyOn(roomRepository, 'findByHostId')
+        .mockResolvedValueOnce(mockRoom);
+
+      const result = await roomUseCase.getOpenRoomByHostId(mockRoomData.hostId);
+
+      expect(findRoomByHostIdSpy).toHaveBeenCalledWith(mockRoomData.hostId, {
+        isClosed: false,
+      });
+      expect(result).toEqual(mockRoom);
+    });
+
+    it('should return null when room not found', async () => {
+      const findRoomByHostIdSpy = jest
+        .spyOn(roomRepository, 'findByHostId')
+        .mockResolvedValueOnce(null);
+
+      const result = await roomUseCase.getOpenRoomByHostId(mockRoomData.hostId);
+
+      expect(findRoomByHostIdSpy).toHaveBeenCalledWith(mockRoomData.hostId, {
+        isClosed: false,
+      });
+      expect(result).toBeNull();
+    });
+  });
 });
