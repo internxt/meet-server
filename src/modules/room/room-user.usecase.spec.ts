@@ -303,7 +303,7 @@ describe('RoomUserUseCase', () => {
       });
     });
 
-    it('When users have no avatars, the avatar field should be undefined', async () => {
+    it('When users have no avatars, the avatar field should be null', async () => {
       const mockRoom = new Room(mockRoomData);
       const mockRoomUsers = [new RoomUser(mockRoomUserData)];
       const mockUsers = [
@@ -339,7 +339,7 @@ describe('RoomUserUseCase', () => {
         name: 'Test User',
         lastName: 'Smith',
         anonymous: false,
-        avatar: undefined,
+        avatar: null,
       });
     });
 
@@ -382,7 +382,6 @@ describe('RoomUserUseCase', () => {
         }),
       ];
       const mockUsers = [
-        // Only one user found in the database
         createMockUser({
           uuid: 'test-user-id',
           avatar: 'avatar-path-1',
@@ -432,7 +431,7 @@ describe('RoomUserUseCase', () => {
         name: 'User 2',
         lastName: 'Last 2',
         anonymous: false,
-        avatar: undefined,
+        avatar: null,
       });
     });
   });

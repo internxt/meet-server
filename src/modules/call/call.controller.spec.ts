@@ -13,6 +13,7 @@ import { createMockUserToken, mockUserPayload } from './fixtures';
 import { RoomUserUseCase } from '../room/room-user.usecase';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
+import { LeaveCallDto } from './dto/leave-call.dto';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
@@ -322,6 +323,71 @@ describe('Testing Call Endpoints', () => {
       expect(callUseCase.leaveCall).toHaveBeenCalledWith(
         mockRoomId,
         mockUserPayload.uuid,
+      );
+    });
+
+    it('should call leaveCall with userId from DTO when user is anonymous', async () => {
+      const anonymousUserId = 'anonymous-user-id';
+      const leaveCallDto = new LeaveCallDto();
+      leaveCallDto.userId = anonymousUserId;
+
+      callUseCase.leaveCall.mockResolvedValueOnce();
+
+      await callController.leaveCall(mockRoomId, null, leaveCallDto);
+
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(
+        mockRoomId,
+        anonymousUserId,
+      );
+    });
+
+    it('should prioritize user UUID when both authenticated user and DTO are provided', async () => {
+      const leaveCallDto = new LeaveCallDto();
+      leaveCallDto.userId = 'anonymous-user-id';
+
+      callUseCase.leaveCall.mockResolvedValueOnce();
+
+      const userToken = createMockUserToken();
+      await callController.leaveCall(
+        mockRoomId,
+        userToken.payload,
+        leaveCallDto,
+      );
+
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(
+        mockRoomId,
+        userToken.payload.uuid,
+      );
+    });
+
+    it('should pass undefined when neither authenticated user nor DTO with userId are provided', async () => {
+      const emptyDto = new LeaveCallDto();
+      callUseCase.leaveCall.mockResolvedValueOnce();
+
+      await callController.leaveCall(mockRoomId, null, emptyDto);
+
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(mockRoomId, undefined);
+    });
+
+    it('should propagate NotFoundException when room is not found', async () => {
+      const userToken = createMockUserToken();
+
+      callUseCase.leaveCall.mockRejectedValueOnce(
+        new NotFoundException('Specified room not found'),
+      );
+
+      await expect(
+        callController.leaveCall(mockRoomId, userToken.payload),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should propagate BadRequestException when no userId is provided', async () => {
+      callUseCase.leaveCall.mockRejectedValueOnce(
+        new BadRequestException('User ID is required'),
+      );
+
+      await expect(callController.leaveCall(mockRoomId, null)).rejects.toThrow(
+        BadRequestException,
       );
     });
   });

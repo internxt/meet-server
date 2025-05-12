@@ -225,21 +225,51 @@ export class CallUseCase {
   }
 
   async leaveCall(roomId: string, userId: string): Promise<void> {
-    const room = await this.roomUseCase.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
     }
 
-    const isHostLeaving = room.hostId === userId;
+    try {
+      const room = await this.roomUseCase.getRoomByRoomId(roomId);
+      if (!room) {
+        throw new NotFoundException(`Specified room not found`);
+      }
 
-    await this.roomUserUseCase.removeUserFromRoom(userId, room);
+      const isHostLeaving = room.hostId === userId;
 
-    const remainingUsers = await this.roomUserUseCase.countUsersInRoom(roomId);
+      await this.roomUserUseCase.removeUserFromRoom(userId, room);
 
-    if (remainingUsers === 0) {
-      await this.roomUseCase.removeRoom(roomId);
-    } else if (isHostLeaving) {
-      await this.roomUseCase.closeRoom(roomId);
+      const remainingUsers =
+        await this.roomUserUseCase.countUsersInRoom(roomId);
+
+      if (remainingUsers === 0) {
+        await this.roomUseCase.removeRoom(roomId);
+      } else if (isHostLeaving) {
+        await this.roomUseCase.closeRoom(roomId);
+      }
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      const err = error as Error;
+      this.logger.error(
+        `Failed to leave call: ${err.message}`,
+        {
+          roomId,
+          userId,
+          error: err.name,
+        },
+        err.stack,
+      );
+
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while leaving the call',
+        { cause: err },
+      );
     }
   }
 }
