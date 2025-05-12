@@ -32,6 +32,7 @@ import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
 import { RoomUserUseCase } from '../room/room-user.usecase';
 import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
+import { LeaveCallDto } from './dto/leave-call.dto';
 @ApiTags('Call')
 @Controller('call')
 export class CallController {
@@ -160,6 +161,7 @@ export class CallController {
   })
   @ApiBearerAuth()
   @ApiParam({ name: 'id', description: 'Call/Room ID' })
+  @ApiBody({ type: LeaveCallDto, required: false })
   @ApiOkResponse({
     description:
       'Successfully left the call or user was not in the call (idempotent). Response body is empty.',
@@ -171,8 +173,9 @@ export class CallController {
   leaveCall(
     @Param('id') roomId: string,
     @User() user: UserTokenData['payload'],
+    @Body() leaveCallDto?: LeaveCallDto,
   ): Promise<void> {
     const { uuid } = user || {};
-    return this.callUseCase.leaveCall(roomId, uuid);
+    return this.callUseCase.leaveCall(roomId, uuid || leaveCallDto?.userId);
   }
 }
