@@ -102,12 +102,9 @@ describe('CallUseCase', () => {
         .spyOn(callUseCase, 'createRoomForCall')
         .mockResolvedValueOnce();
 
-      const result = await callUseCase.createCallAndRoom(
-        mockUserPayload.uuid,
-        mockUserPayload.email,
-      );
+      const result = await callUseCase.createCallAndRoom(mockUserPayload);
 
-      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
       expect(createRoomForCallSpy).toHaveBeenCalledWith(
         mockCallResponse,
         mockUserPayload.uuid,
@@ -123,13 +120,10 @@ describe('CallUseCase', () => {
         .mockRejectedValueOnce(error);
 
       await expect(
-        callUseCase.createCallAndRoom(
-          mockUserPayload.uuid,
-          mockUserPayload.email,
-        ),
+        callUseCase.createCallAndRoom(mockUserPayload),
       ).rejects.toThrow(error);
 
-      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
     });
   });
 
