@@ -14,9 +14,6 @@ const defaultDbConfig = (
   dialect: 'postgres' as const,
   autoLoadModels: true,
   synchronize: false,
-  replication: !configService.get<boolean>('isDevelopment')
-    ? configService.get<ReplicationOptions>('database.replication')
-    : (false as const),
   pool: {
     max: 20,
     min: 0,
@@ -61,6 +58,9 @@ const defaultDbConfig = (
         username: configService.get('database.username'),
         password: configService.get('database.password'),
         database: configService.get('database.database'),
+        replication: !configService.get<boolean>('isDevelopment')
+          ? configService.get<ReplicationOptions>('database.replication')
+          : (false as const),
         ...defaultDbConfig(configService),
       }),
     }),
@@ -74,6 +74,9 @@ const defaultDbConfig = (
         username: configService.get('driveDatabase.username'),
         password: configService.get('driveDatabase.password'),
         database: configService.get('driveDatabase.database'),
+        replication: !configService.get<boolean>('isDevelopment')
+          ? configService.get<ReplicationOptions>('driveDatabase.replication')
+          : (false as const),
         ...defaultDbConfig(configService),
       }),
     }),

@@ -52,6 +52,25 @@ export default () => ({
     username: process.env.DRIVE_DB_USERNAME,
     password: process.env.DRIVE_DB_PASSWORD,
     database: process.env.DRIVE_DB_NAME,
+    replication: {
+      read: [
+        {
+          host: process.env.DRIVE_DB_HOSTNAME2,
+          username: process.env.DRIVE_DB_USERNAME,
+          password: process.env.DRIVE_DB_PASSWORD,
+        },
+        {
+          host: process.env.DRIVE_DB_HOSTNAME3,
+          username: process.env.DRIVE_DB_USERNAME,
+          password: process.env.DRIVE_DB_PASSWORD,
+        },
+      ],
+      write: {
+        host: process.env.DRIVE_DB_HOSTNAME,
+        username: process.env.DRIVE_DB_USERNAME,
+        password: process.env.DRIVE_DB_PASSWORD,
+      },
+    },
   },
   avatar: {
     accessKey: process.env.AVATAR_ACCESS_KEY,
