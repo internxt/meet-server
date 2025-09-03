@@ -1,12 +1,12 @@
-import { UnauthorizedException } from '@nestjs/common';
-import { CallService } from './call.service';
-import { PaymentService, Tier } from '../../externals/payments.service';
-import * as uuid from 'uuid';
-import * as jwt from 'jsonwebtoken';
-import { Test } from '@nestjs/testing';
-import { ConfigModule } from '@nestjs/config';
-import configuration from '../../config/configuration';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { UnauthorizedException } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { Test } from '@nestjs/testing';
+import * as jwt from 'jsonwebtoken';
+import * as uuid from 'uuid';
+import configuration from '../../config/configuration';
+import { PaymentService, Tier } from '../../externals/payments.service';
+import { CallService } from './call.service';
 
 jest.mock('uuid');
 jest.mock('jsonwebtoken');
@@ -88,7 +88,10 @@ describe('Call service', () => {
       const userId = 'test-user-id';
       const roomId = 'test-room-id';
       const isAnonymous = false;
-      const expectedToken = 'test-participant-token';
+      const expectedToken = {
+        token: 'test-participant-token',
+        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+      };
 
       (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
 

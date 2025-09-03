@@ -1,6 +1,6 @@
 import { JwtHeader } from 'jsonwebtoken';
-import configuration from '../config/configuration';
 import { v4 } from 'uuid';
+import configuration from '../config/configuration';
 
 export const getJitsiJWTSecret = () => {
   const jitsiSecret = configuration().secrets.jitsiSecret;
@@ -17,8 +17,9 @@ export const getJitsiJWTPayload = (
   room: string,
   moderator: boolean,
 ) => {
-  const now = new Date();
+  const now = Math.round(new Date().getTime() / 1000);
   const appId = configuration().jitsi.appId;
+
   return {
     aud: 'jitsi',
     context: {
@@ -37,10 +38,11 @@ export const getJitsiJWTPayload = (
       },
     },
     iss: 'chat',
-    room: room,
     sub: appId,
-    exp: Math.round(now.setMinutes(now.getMinutes() + 1) / 1000),
-    nbf: Math.round(new Date().getTime() / 1000) - 10,
+    room: room,
+    exp: now + 60,
+    nbf: now - 10,
+    iat: now,
   };
 };
 

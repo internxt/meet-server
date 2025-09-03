@@ -1,19 +1,18 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { CallController } from './call.controller';
-import { CallUseCase } from './call.usecase';
 import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { createMockUserToken, mockUserPayload } from './fixtures';
-import { RoomUserUseCase } from '../room/room-user.usecase';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { CallController } from './call.controller';
+import { CallUseCase } from './call.usecase';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
+import { createMockUserToken, mockUserPayload } from './fixtures';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
@@ -30,6 +29,7 @@ describe('Testing Call Endpoints', () => {
     token: 'mock-token',
     room: mockRoomId,
     userId: 'user-id',
+    appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
   };
   const mockUsersInRoom: UsersInRoomDto[] = [
     {
@@ -85,6 +85,7 @@ describe('Testing Call Endpoints', () => {
         token: 'test-token',
         room: 'room-123',
         paxPerCall: 5,
+        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
       };
 
       callUseCase.validateUserHasNoActiveRoom.mockResolvedValueOnce(undefined);
@@ -239,6 +240,7 @@ describe('Testing Call Endpoints', () => {
         token: 'default-token',
         room: mockRoomId,
         userId: mockUserToken.payload.uuid,
+        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123e8',
       };
 
       callUseCase.joinCall.mockResolvedValueOnce(mockJoinCallResponse);
