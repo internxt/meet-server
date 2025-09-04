@@ -220,7 +220,7 @@ describe('CallUseCase', () => {
     const roomMock = createMock<Room>(mockRoomData);
     const callToken = {
       token: 'test-call-token',
-      appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+      appId: 'jitsi-app-id',
     };
 
     // Create a proper RoomUser mock
@@ -406,7 +406,7 @@ describe('CallUseCase', () => {
       const lastName = 'Last Name';
       const callToken = {
         token: 'test-call-token',
-        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+        appId: 'jitsi-app-id',
       };
       const roomMock = createMock<Room>(mockRoomData);
       roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
@@ -444,7 +444,7 @@ describe('CallUseCase', () => {
       const name = 'Anonymous User';
       const callToken = {
         token: 'test-call-token',
-        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+        appId: 'jitsi-app-id',
       };
 
       const roomMock = createMock<Room>(mockRoomData);
@@ -484,7 +484,7 @@ describe('CallUseCase', () => {
       const name = 'User without ID';
       const callToken = {
         token: 'test-call-token',
-        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+        appId: 'jitsi-app-id',
       };
 
       const roomMock = createMock<Room>(mockRoomData);

@@ -29,7 +29,7 @@ describe('Testing Call Endpoints', () => {
     token: 'mock-token',
     room: mockRoomId,
     userId: 'user-id',
-    appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+    appId: 'jitsi-app-id',
   };
   const mockUsersInRoom: UsersInRoomDto[] = [
     {
@@ -85,7 +85,7 @@ describe('Testing Call Endpoints', () => {
         token: 'test-token',
         room: 'room-123',
         paxPerCall: 5,
-        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+        appId: 'jitsi-app-id',
       };
 
       callUseCase.validateUserHasNoActiveRoom.mockResolvedValueOnce(undefined);

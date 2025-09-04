@@ -56,6 +56,7 @@ describe('Call service', () => {
     const result = await callService.createCallToken('user-123');
 
     expect(result).toEqual({
+      appId: 'jitsi-app-id',
       token: 'test-jitsi-token',
       room: 'test-room-id',
       paxPerCall: 10,
@@ -90,7 +91,7 @@ describe('Call service', () => {
       const isAnonymous = false;
       const expectedToken = {
         token: 'test-participant-token',
-        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+        appId: 'jitsi-app-id',
       };
 
       (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
@@ -101,7 +102,7 @@ describe('Call service', () => {
         isAnonymous,
       );
 
-      expect(result).toBe(expectedToken);
+      expect(result).toBe({ appID: 'jitsi-app-id', token: expectedToken });
       expect(jwt.sign).toHaveBeenCalled();
     });
 
