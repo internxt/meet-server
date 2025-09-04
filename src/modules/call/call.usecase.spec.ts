@@ -272,6 +272,7 @@ describe('CallUseCase', () => {
         userId,
         roomId,
         false,
+        false,
       );
       expect(result).toEqual({
         token: callToken.token,
@@ -311,6 +312,7 @@ describe('CallUseCase', () => {
         anonymousUserMock.userId,
         roomId,
         true,
+        false,
       );
       expect(result).toEqual({
         token: callToken.token,
@@ -435,6 +437,7 @@ describe('CallUseCase', () => {
       expect(createCallTokenForParticipantSpy).toHaveBeenCalledWith(
         userId,
         roomId,
+        false,
         false,
       );
     });
