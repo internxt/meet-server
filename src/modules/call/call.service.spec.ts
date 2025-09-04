@@ -102,7 +102,7 @@ describe('Call service', () => {
         isAnonymous,
       );
 
-      expect(result).toBe({ appID: 'jitsi-app-id', token: expectedToken });
+      expect(result).toBe({ appId: 'jitsi-app-id', token: expectedToken });
       expect(jwt.sign).toHaveBeenCalled();
     });
 
