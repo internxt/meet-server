@@ -143,6 +143,7 @@ export class CallUseCase {
       }
 
       const processedUserData = this.processUserData(userData);
+      const isOwner = processedUserData.userId === room.hostId;
 
       const roomUser = await this.roomUserUseCase.addUserToRoom(
         roomId,
@@ -154,6 +155,7 @@ export class CallUseCase {
         roomUser.userId,
         roomId,
         !!roomUser.anonymous,
+        isOwner,
       );
 
       if (processedUserData.userId === room.hostId && room.isClosed) {
