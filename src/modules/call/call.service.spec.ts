@@ -1,12 +1,12 @@
-import { UnauthorizedException } from '@nestjs/common';
-import { CallService } from './call.service';
-import { PaymentService, Tier } from '../../externals/payments.service';
-import * as uuid from 'uuid';
-import * as jwt from 'jsonwebtoken';
-import { Test } from '@nestjs/testing';
-import { ConfigModule } from '@nestjs/config';
-import configuration from '../../config/configuration';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { UnauthorizedException } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { Test } from '@nestjs/testing';
+import * as jwt from 'jsonwebtoken';
+import * as uuid from 'uuid';
+import configuration from '../../config/configuration';
+import { PaymentService, Tier } from '../../externals/payments.service';
+import { CallService } from './call.service';
 
 jest.mock('uuid');
 jest.mock('jsonwebtoken');
@@ -56,6 +56,7 @@ describe('Call service', () => {
     const result = await callService.createCallToken('user-123');
 
     expect(result).toEqual({
+      appId: 'jitsi-app-id',
       token: 'test-jitsi-token',
       room: 'test-room-id',
       paxPerCall: 10,
@@ -98,7 +99,10 @@ describe('Call service', () => {
         isAnonymous,
       );
 
-      expect(result).toBe(expectedToken);
+      expect(result).toStrictEqual({
+        appId: 'jitsi-app-id',
+        token: expectedToken,
+      });
       expect(jwt.sign).toHaveBeenCalled();
     });
 
@@ -116,7 +120,10 @@ describe('Call service', () => {
         isAnonymous,
       );
 
-      expect(result).toBe(expectedToken);
+      expect(result).toStrictEqual({
+        appId: 'jitsi-app-id',
+        token: expectedToken,
+      });
       expect(jwt.sign).toHaveBeenCalled();
     });
   });
