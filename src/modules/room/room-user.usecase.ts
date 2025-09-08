@@ -79,7 +79,7 @@ export class RoomUserUseCase {
       name: roomUser.name,
       lastName: roomUser.lastName,
       anonymous: roomUser.anonymous,
-      avatar: userAvatars.get(roomUser.userId),
+      avatar: userAvatars.get(roomUser.userId) || null,
     }));
   }
 

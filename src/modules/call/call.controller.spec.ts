@@ -1,18 +1,18 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { CallController } from './call.controller';
-import { CallUseCase } from './call.usecase';
 import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { createMockUserToken, mockUserPayload } from './fixtures';
-import { RoomUserUseCase } from '../room/room-user.usecase';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { CallController } from './call.controller';
+import { CallUseCase } from './call.usecase';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
+import { LeaveCallDto } from './dto/leave-call.dto';
+import { createMockUserToken, mockUserPayload } from './fixtures';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
@@ -29,6 +29,7 @@ describe('Testing Call Endpoints', () => {
     token: 'mock-token',
     room: mockRoomId,
     userId: 'user-id',
+    appId: 'jitsi-app-id',
   };
   const mockUsersInRoom: UsersInRoomDto[] = [
     {
@@ -84,6 +85,7 @@ describe('Testing Call Endpoints', () => {
         token: 'test-token',
         room: 'room-123',
         paxPerCall: 5,
+        appId: 'jitsi-app-id',
       };
 
       callUseCase.validateUserHasNoActiveRoom.mockResolvedValueOnce(undefined);
@@ -237,6 +239,7 @@ describe('Testing Call Endpoints', () => {
         token: 'default-token',
         room: mockRoomId,
         userId: mockUserToken.payload.uuid,
+        appId: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123e8',
       };
 
       callUseCase.joinCall.mockResolvedValueOnce(mockJoinCallResponse);
@@ -321,6 +324,71 @@ describe('Testing Call Endpoints', () => {
       expect(callUseCase.leaveCall).toHaveBeenCalledWith(
         mockRoomId,
         mockUserPayload.uuid,
+      );
+    });
+
+    it('should call leaveCall with userId from DTO when user is anonymous', async () => {
+      const anonymousUserId = 'anonymous-user-id';
+      const leaveCallDto = new LeaveCallDto();
+      leaveCallDto.userId = anonymousUserId;
+
+      callUseCase.leaveCall.mockResolvedValueOnce();
+
+      await callController.leaveCall(mockRoomId, null, leaveCallDto);
+
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(
+        mockRoomId,
+        anonymousUserId,
+      );
+    });
+
+    it('should prioritize user UUID when both authenticated user and DTO are provided', async () => {
+      const leaveCallDto = new LeaveCallDto();
+      leaveCallDto.userId = 'anonymous-user-id';
+
+      callUseCase.leaveCall.mockResolvedValueOnce();
+
+      const userToken = createMockUserToken();
+      await callController.leaveCall(
+        mockRoomId,
+        userToken.payload,
+        leaveCallDto,
+      );
+
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(
+        mockRoomId,
+        userToken.payload.uuid,
+      );
+    });
+
+    it('should pass undefined when neither authenticated user nor DTO with userId are provided', async () => {
+      const emptyDto = new LeaveCallDto();
+      callUseCase.leaveCall.mockResolvedValueOnce();
+
+      await callController.leaveCall(mockRoomId, null, emptyDto);
+
+      expect(callUseCase.leaveCall).toHaveBeenCalledWith(mockRoomId, undefined);
+    });
+
+    it('should propagate NotFoundException when room is not found', async () => {
+      const userToken = createMockUserToken();
+
+      callUseCase.leaveCall.mockRejectedValueOnce(
+        new NotFoundException('Specified room not found'),
+      );
+
+      await expect(
+        callController.leaveCall(mockRoomId, userToken.payload),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should propagate BadRequestException when no userId is provided', async () => {
+      callUseCase.leaveCall.mockRejectedValueOnce(
+        new BadRequestException('User ID is required'),
+      );
+
+      await expect(callController.leaveCall(mockRoomId, null)).rejects.toThrow(
+        BadRequestException,
       );
     });
   });

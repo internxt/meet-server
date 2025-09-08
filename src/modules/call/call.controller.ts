@@ -1,37 +1,39 @@
 import {
   BadRequestException,
+  Body,
   ConflictException,
   Controller,
+  Get,
   HttpCode,
   InternalServerErrorException,
   Logger,
+  Param,
   Post,
   UseGuards,
-  Param,
-  Body,
-  Get,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiConflictResponse,
+  ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiTags,
-  ApiInternalServerErrorResponse,
-  ApiConflictResponse,
   ApiParam,
-  ApiBody,
-  ApiNotFoundResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
-import { CallUseCase } from './call.usecase';
-import { CreateCallResponseDto } from './dto/create-call.dto';
-import { UserTokenData } from '../auth/dto/user.dto';
+import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
 import { User } from '../auth/decorators/user.decorator';
-import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
+import { UserTokenData } from '../auth/dto/user.dto';
 import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
 import { RoomUserUseCase } from '../room/room-user.usecase';
-import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
+import { CallUseCase } from './call.usecase';
+import { CreateCallResponseDto } from './dto/create-call.dto';
+import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
+import { LeaveCallDto } from './dto/leave-call.dto';
+
 @ApiTags('Call')
 @Controller('call')
 export class CallController {
@@ -160,6 +162,7 @@ export class CallController {
   })
   @ApiBearerAuth()
   @ApiParam({ name: 'id', description: 'Call/Room ID' })
+  @ApiBody({ type: LeaveCallDto, required: false })
   @ApiOkResponse({
     description:
       'Successfully left the call or user was not in the call (idempotent). Response body is empty.',
@@ -171,8 +174,9 @@ export class CallController {
   leaveCall(
     @Param('id') roomId: string,
     @User() user: UserTokenData['payload'],
+    @Body() leaveCallDto?: LeaveCallDto,
   ): Promise<void> {
     const { uuid } = user || {};
-    return this.callUseCase.leaveCall(roomId, uuid);
+    return this.callUseCase.leaveCall(roomId, uuid || leaveCallDto?.userId);
   }
 }

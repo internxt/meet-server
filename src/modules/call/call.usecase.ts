@@ -1,20 +1,20 @@
 import {
-  Injectable,
-  Logger,
   BadRequestException,
   ConflictException,
+  Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { CallService } from './call.service';
-import { RoomUseCase } from '../room/room.usecase';
-import { Room } from '../room/room.domain';
-import { RoomUserUseCase } from '../room/room-user.usecase';
-import { JoinCallResponseDto } from './dto/join-call.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { CreateCallResponseDto } from './dto/create-call.dto';
-import { User } from '../user/user.domain';
 import { UserTokenData } from '../auth/dto/user.dto';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { Room } from '../room/room.domain';
+import { RoomUseCase } from '../room/room.usecase';
+import { User } from '../user/user.domain';
+import { CallService } from './call.service';
+import { CreateCallResponseDto } from './dto/create-call.dto';
+import { JoinCallResponseDto } from './dto/join-call.dto';
 
 @Injectable()
 export class CallUseCase {
@@ -145,6 +145,7 @@ export class CallUseCase {
       }
 
       const processedUserData = this.processUserData(userData);
+      const isOwner = processedUserData.userId === room.hostId;
 
       const roomUser = await this.roomUserUseCase.addUserToRoom(
         roomId,
@@ -152,10 +153,11 @@ export class CallUseCase {
       );
 
       // Generate token for the user
-      const token = this.callService.createCallTokenForParticipant(
+      const tokenData = this.callService.createCallTokenForParticipant(
         roomUser.userId,
         roomId,
         !!roomUser.anonymous,
+        isOwner,
       );
 
       if (processedUserData.userId === room.hostId && room.isClosed) {
@@ -163,9 +165,10 @@ export class CallUseCase {
       }
 
       return {
-        token,
+        token: tokenData.token,
         room: roomId,
         userId: roomUser.userId,
+        appId: tokenData.appId,
       };
     } catch (error) {
       if (
@@ -226,21 +229,51 @@ export class CallUseCase {
   }
 
   async leaveCall(roomId: string, userId: string): Promise<void> {
-    const room = await this.roomUseCase.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
     }
 
-    const isHostLeaving = room.hostId === userId;
+    try {
+      const room = await this.roomUseCase.getRoomByRoomId(roomId);
+      if (!room) {
+        throw new NotFoundException(`Specified room not found`);
+      }
 
-    await this.roomUserUseCase.removeUserFromRoom(userId, room);
+      const isHostLeaving = room.hostId === userId;
 
-    const remainingUsers = await this.roomUserUseCase.countUsersInRoom(roomId);
+      await this.roomUserUseCase.removeUserFromRoom(userId, room);
 
-    if (remainingUsers === 0) {
-      await this.roomUseCase.removeRoom(roomId);
-    } else if (isHostLeaving) {
-      await this.roomUseCase.closeRoom(roomId);
+      const remainingUsers =
+        await this.roomUserUseCase.countUsersInRoom(roomId);
+
+      if (remainingUsers === 0) {
+        await this.roomUseCase.removeRoom(roomId);
+      } else if (isHostLeaving) {
+        await this.roomUseCase.closeRoom(roomId);
+      }
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      const err = error as Error;
+      this.logger.error(
+        `Failed to leave call: ${err.message}`,
+        {
+          roomId,
+          userId,
+          error: err.name,
+        },
+        err.stack,
+      );
+
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while leaving the call',
+        { cause: err },
+      );
     }
   }
 }

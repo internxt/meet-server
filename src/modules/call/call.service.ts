@@ -1,14 +1,15 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { v4 } from 'uuid';
-import { PaymentService, Tier } from '../../externals/payments.service';
 import jwt, { JwtHeader } from 'jsonwebtoken';
+import { v4 } from 'uuid';
+import configuration from '../../config/configuration';
+import { PaymentService, Tier } from '../../externals/payments.service';
 import {
   getJitsiJWTHeader,
   getJitsiJWTPayload,
   getJitsiJWTSecret,
 } from '../../lib/jitsi';
-import { User } from '../user/user.domain';
 import { UserTokenData } from '../auth/dto/user.dto';
+import { User } from '../user/user.domain';
 
 export function SignWithRS256AndHeader(
   payload: object,
@@ -69,13 +70,19 @@ export class CallService {
       true,
     );
 
-    return { token, room: newRoom, paxPerCall: meetFeatures.paxPerCall };
+    return {
+      token,
+      room: newRoom,
+      paxPerCall: meetFeatures.paxPerCall,
+      appId: configuration().jitsi.appId,
+    };
   }
 
   createCallTokenForParticipant(
     userId: string,
     roomId: string,
     isAnonymous: boolean,
+    isModerator: boolean,
     user?: User | UserTokenData['payload'],
   ) {
     const token = generateJitsiJWT(
@@ -85,9 +92,12 @@ export class CallService {
         name: isAnonymous ? 'Anonymous' : `${user.name} ${user.lastname}`,
       },
       roomId,
-      false,
+      isModerator,
     );
 
-    return token;
+    return {
+      token,
+      appId: configuration().jitsi.appId,
+    };
   }
 }

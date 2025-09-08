@@ -5,7 +5,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { format } from 'sql-formatter';
-import { ReplicationOptions } from 'sequelize';
 import { UserModule } from './modules/user/user.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
 
@@ -15,9 +14,6 @@ const defaultDbConfig = (
   dialect: 'postgres' as const,
   autoLoadModels: true,
   synchronize: false,
-  replication: !configService.get<boolean>('isDevelopment')
-    ? configService.get<ReplicationOptions>('database.replication')
-    : (false as const),
   pool: {
     max: 20,
     min: 0,

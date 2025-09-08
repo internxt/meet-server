@@ -1,12 +1,12 @@
-import { UnauthorizedException } from '@nestjs/common';
-import { CallService } from './call.service';
-import { PaymentService, Tier } from '../../externals/payments.service';
-import * as uuid from 'uuid';
-import * as jwt from 'jsonwebtoken';
-import { Test } from '@nestjs/testing';
-import { ConfigModule } from '@nestjs/config';
-import configuration from '../../config/configuration';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { UnauthorizedException } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { Test } from '@nestjs/testing';
+import * as jwt from 'jsonwebtoken';
+import * as uuid from 'uuid';
+import configuration from '../../config/configuration';
+import { PaymentService, Tier } from '../../externals/payments.service';
+import { CallService } from './call.service';
 import { mockUserPayload } from './fixtures';
 
 jest.mock('uuid');
@@ -58,6 +58,7 @@ describe('Call service', () => {
     const result = await callService.createCallToken(userPayload);
 
     expect(result).toEqual({
+      appId: 'jitsi-app-id',
       token: 'test-jitsi-token',
       room: 'test-room-id',
       paxPerCall: 10,
@@ -87,11 +88,12 @@ describe('Call service', () => {
   });
 
   describe('createCallTokenForParticipant', () => {
-    it('should create a token for a registered user', () => {
+    it('should create a token for a registered user (non-moderator)', () => {
       const userPayload = mockUserPayload;
       const userId = userPayload.uuid;
       const roomId = 'test-room-id';
       const isAnonymous = false;
+      const isModerator = false;
       const expectedToken = 'test-participant-token';
 
       (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
@@ -100,17 +102,22 @@ describe('Call service', () => {
         userId,
         roomId,
         isAnonymous,
+        isModerator,
         userPayload,
       );
 
-      expect(result).toBe(expectedToken);
+      expect(result).toStrictEqual({
+        appId: 'jitsi-app-id',
+        token: expectedToken,
+      });
       expect(jwt.sign).toHaveBeenCalled();
     });
 
-    it('should create a token for an anonymous user', () => {
+    it('should create a token for an anonymous user (non-moderator)', () => {
       const userId = 'anonymous-user-id';
       const roomId = 'test-room-id';
       const isAnonymous = true;
+      const isModerator = false;
       const expectedToken = 'test-anonymous-token';
 
       (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
@@ -119,9 +126,36 @@ describe('Call service', () => {
         userId,
         roomId,
         isAnonymous,
+        isModerator,
       );
 
-      expect(result).toBe(expectedToken);
+      expect(result).toStrictEqual({
+        appId: 'jitsi-app-id',
+        token: expectedToken,
+      });
+      expect(jwt.sign).toHaveBeenCalled();
+    });
+
+    it('should create a token for a moderator user', () => {
+      const userId = 'moderator-user-id';
+      const roomId = 'test-room-id';
+      const isAnonymous = false;
+      const isModerator = true;
+      const expectedToken = 'test-moderator-token';
+
+      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
+
+      const result = callService.createCallTokenForParticipant(
+        userId,
+        roomId,
+        isAnonymous,
+        isModerator,
+      );
+
+      expect(result).toStrictEqual({
+        appId: 'jitsi-app-id',
+        token: expectedToken,
+      });
       expect(jwt.sign).toHaveBeenCalled();
     });
   });

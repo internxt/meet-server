@@ -32,25 +32,6 @@ export default () => ({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    replication: {
-      read: [
-        {
-          host: process.env.DB_HOSTNAME2,
-          username: process.env.DB_USERNAME,
-          password: process.env.DB_PASSWORD,
-        },
-        {
-          host: process.env.DB_HOSTNAME3,
-          username: process.env.DB_USERNAME,
-          password: process.env.DB_PASSWORD,
-        },
-      ],
-      write: {
-        host: process.env.DB_HOSTNAME,
-        username: process.env.DB_USERNAME,
-        password: process.env.DB_PASSWORD,
-      },
-    },
   },
   driveDatabase: {
     host: process.env.DRIVE_DB_HOSTNAME,
