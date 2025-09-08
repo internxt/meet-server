@@ -26,6 +26,10 @@ export class JoinCallDto {
   @IsBoolean()
   @IsOptional()
   anonymous?: boolean;
+
+  @IsString()
+  @IsOptional()
+  email?: string;
 }
 
 export class JoinCallResponseDto {

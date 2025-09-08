@@ -14,6 +14,10 @@ import { CallService } from './call.service';
 import { CallUseCase } from './call.usecase';
 import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
 
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'generated-uuid'),
+}));
+
 describe('CallUseCase', () => {
   let callUseCase: CallUseCase;
   let callService: DeepMocked<CallService>;
@@ -267,6 +271,13 @@ describe('CallUseCase', () => {
         roomId,
         false,
         false,
+        {
+          anonymous: false,
+          email: undefined,
+          lastName: 'Last Name',
+          name: 'Test User',
+          userId: 'test-user-id',
+        },
       );
       expect(result).toEqual({
         token: callToken.token,
@@ -307,6 +318,13 @@ describe('CallUseCase', () => {
         roomId,
         true,
         false,
+        {
+          anonymous: true,
+          email: undefined,
+          lastName: undefined,
+          name: userData.name,
+          userId: anonymousUserMock.userId,
+        },
       );
       expect(result).toEqual({
         token: callToken.token,
@@ -433,6 +451,13 @@ describe('CallUseCase', () => {
         roomId,
         false,
         false,
+        {
+          anonymous: false,
+          email: undefined,
+          lastName: 'Last Name',
+          name: 'Test User',
+          userId: 'test-user-id',
+        },
       );
     });
 

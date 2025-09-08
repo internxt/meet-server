@@ -10,6 +10,7 @@ import {
 } from '../../lib/jitsi';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { User } from '../user/user.domain';
+import { UserDataForToken } from '../user/user.attributes';
 
 export function SignWithRS256AndHeader(
   payload: object,
@@ -83,13 +84,13 @@ export class CallService {
     roomId: string,
     isAnonymous: boolean,
     isModerator: boolean,
-    user?: User | UserTokenData['payload'],
+    user?: UserDataForToken,
   ) {
     const token = generateJitsiJWT(
       {
         id: userId,
         email: isAnonymous ? 'anonymous@inxt.com' : user.email,
-        name: isAnonymous ? 'Anonymous' : `${user.name} ${user.lastname}`,
+        name: isAnonymous ? 'Anonymous' : `${user.name} ${user?.lastName}`,
       },
       roomId,
       isModerator,
