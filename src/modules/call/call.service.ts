@@ -79,6 +79,7 @@ export class CallService {
     userId: string,
     roomId: string,
     isAnonymous: boolean,
+    isModerator: boolean,
   ) {
     const token = generateJitsiJWT(
       {
@@ -87,7 +88,7 @@ export class CallService {
         name: isAnonymous ? 'Anonymous' : 'User',
       },
       roomId,
-      false,
+      isModerator,
     );
 
     return {

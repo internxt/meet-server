@@ -85,10 +85,11 @@ describe('Call service', () => {
   });
 
   describe('createCallTokenForParticipant', () => {
-    it('should create a token for a registered user', () => {
+    it('should create a token for a registered user (non-moderator)', () => {
       const userId = 'test-user-id';
       const roomId = 'test-room-id';
       const isAnonymous = false;
+      const isModerator = false;
       const expectedToken = 'test-participant-token';
 
       (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
@@ -97,6 +98,7 @@ describe('Call service', () => {
         userId,
         roomId,
         isAnonymous,
+        isModerator,
       );
 
       expect(result).toStrictEqual({
@@ -106,10 +108,11 @@ describe('Call service', () => {
       expect(jwt.sign).toHaveBeenCalled();
     });
 
-    it('should create a token for an anonymous user', () => {
+    it('should create a token for an anonymous user (non-moderator)', () => {
       const userId = 'anonymous-user-id';
       const roomId = 'test-room-id';
       const isAnonymous = true;
+      const isModerator = false;
       const expectedToken = 'test-anonymous-token';
 
       (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
@@ -118,6 +121,30 @@ describe('Call service', () => {
         userId,
         roomId,
         isAnonymous,
+        isModerator,
+      );
+
+      expect(result).toStrictEqual({
+        appId: 'jitsi-app-id',
+        token: expectedToken,
+      });
+      expect(jwt.sign).toHaveBeenCalled();
+    });
+
+    it('should create a token for a moderator user', () => {
+      const userId = 'moderator-user-id';
+      const roomId = 'test-room-id';
+      const isAnonymous = false;
+      const isModerator = true;
+      const expectedToken = 'test-moderator-token';
+
+      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
+
+      const result = callService.createCallTokenForParticipant(
+        userId,
+        roomId,
+        isAnonymous,
+        isModerator,
       );
 
       expect(result).toStrictEqual({
