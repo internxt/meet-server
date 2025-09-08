@@ -18,4 +18,11 @@ export class CreateCallResponseDto {
     example: 10,
   })
   paxPerCall: number;
+
+  @ApiProperty({
+    description: 'The application ID used for Jitsi connection authentication',
+    type: String,
+    example: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
+  })
+  appId: string;
 }

@@ -1,8 +1,7 @@
 import { Chance } from 'chance';
 import { UserTokenData } from '../auth/dto/user.dto';
-import { RoomModel } from '../room/models/room.model';
-import { CreateCallResponseDto } from './dto/create-call.dto';
 import { Room } from '../room/room.domain';
+import { CreateCallResponseDto } from './dto/create-call.dto';
 
 const randomDataGenerator = new Chance();
 
@@ -50,6 +49,7 @@ export const mockCallResponse: CreateCallResponseDto = {
   token: randomDataGenerator.string({ length: 32 }),
   room: mockRoomData.id,
   paxPerCall: mockRoomData.maxUsersAllowed,
+  appId: 'testAppId',
 };
 
 export const createMockCallResponse = (

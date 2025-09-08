@@ -1,19 +1,18 @@
 import {
-  Injectable,
-  Logger,
   BadRequestException,
   ConflictException,
+  Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { CallService } from './call.service';
-import { RoomUseCase } from '../room/room.usecase';
-import { Room } from '../room/room.domain';
-import { RoomUserUseCase } from '../room/room-user.usecase';
-import { JoinCallResponseDto } from './dto/join-call.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { Room } from '../room/room.domain';
+import { RoomUseCase } from '../room/room.usecase';
+import { CallService } from './call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
-
+import { JoinCallResponseDto } from './dto/join-call.dto';
 @Injectable()
 export class CallUseCase {
   private readonly logger = new Logger(CallUseCase.name);
@@ -144,6 +143,7 @@ export class CallUseCase {
       }
 
       const processedUserData = this.processUserData(userData);
+      const isOwner = processedUserData.userId === room.hostId;
 
       const roomUser = await this.roomUserUseCase.addUserToRoom(
         roomId,
@@ -151,10 +151,11 @@ export class CallUseCase {
       );
 
       // Generate token for the user
-      const token = this.callService.createCallTokenForParticipant(
+      const tokenData = this.callService.createCallTokenForParticipant(
         roomUser.userId,
         roomId,
         !!roomUser.anonymous,
+        isOwner,
       );
 
       if (processedUserData.userId === room.hostId && room.isClosed) {
@@ -162,9 +163,10 @@ export class CallUseCase {
       }
 
       return {
-        token,
+        token: tokenData.token,
         room: roomId,
         userId: roomUser.userId,
+        appId: tokenData.appId,
       };
     } catch (error) {
       if (

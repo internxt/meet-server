@@ -1,18 +1,18 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { CallUseCase } from './call.usecase';
-import { CallService } from './call.service';
-import { RoomUseCase } from '../room/room.usecase';
 import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
-import { Room } from '../room/room.domain';
-import { RoomUserUseCase } from '../room/room-user.usecase';
+import { Test, TestingModule } from '@nestjs/testing';
 import { RoomUser } from '../room/room-user.domain';
+import { RoomUserUseCase } from '../room/room-user.usecase';
+import { Room } from '../room/room.domain';
+import { RoomUseCase } from '../room/room.usecase';
+import { CallService } from './call.service';
+import { CallUseCase } from './call.usecase';
+import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
 
 describe('CallUseCase', () => {
   let callUseCase: CallUseCase;
@@ -218,7 +218,10 @@ describe('CallUseCase', () => {
     const userName = 'Test User';
     const userLastName = 'Last Name';
     const roomMock = createMock<Room>(mockRoomData);
-    const callToken = 'test-call-token';
+    const callToken = {
+      token: 'test-call-token',
+      appId: 'jitsi-app-id',
+    };
 
     // Create a proper RoomUser mock
     const roomUserMock = new RoomUser({
@@ -269,11 +272,13 @@ describe('CallUseCase', () => {
         userId,
         roomId,
         false,
+        false,
       );
       expect(result).toEqual({
-        token: callToken,
+        token: callToken.token,
         room: roomId,
         userId,
+        appId: callToken.appId,
       });
     });
 
@@ -307,11 +312,13 @@ describe('CallUseCase', () => {
         anonymousUserMock.userId,
         roomId,
         true,
+        false,
       );
       expect(result).toEqual({
-        token: callToken,
+        token: callToken.token,
         room: roomId,
         userId: anonymousUserMock.userId,
+        appId: callToken.appId,
       });
     });
 
@@ -399,7 +406,10 @@ describe('CallUseCase', () => {
       const userId = 'test-user-id';
       const name = 'Test User';
       const lastName = 'Last Name';
-
+      const callToken = {
+        token: 'test-call-token',
+        appId: 'jitsi-app-id',
+      };
       const roomMock = createMock<Room>(mockRoomData);
       roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
 
@@ -415,7 +425,7 @@ describe('CallUseCase', () => {
       roomUserUseCase.addUserToRoom.mockResolvedValueOnce(registeredRoomUser);
       const createCallTokenForParticipantSpy = jest
         .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce('test-token');
+        .mockReturnValueOnce(callToken);
 
       await callUseCase.joinCall(roomId, {
         userId,
@@ -428,12 +438,17 @@ describe('CallUseCase', () => {
         userId,
         roomId,
         false,
+        false,
       );
     });
 
     it('should handle anonymous user data correctly', async () => {
       const roomId = 'test-room-id';
       const name = 'Anonymous User';
+      const callToken = {
+        token: 'test-call-token',
+        appId: 'jitsi-app-id',
+      };
 
       const roomMock = createMock<Room>(mockRoomData);
       roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
@@ -451,7 +466,7 @@ describe('CallUseCase', () => {
         .mockResolvedValueOnce(anonymousRoomUser);
       jest
         .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce('test-token');
+        .mockReturnValueOnce(callToken);
 
       await callUseCase.joinCall(roomId, {
         name,
@@ -470,6 +485,10 @@ describe('CallUseCase', () => {
     it('should generate user ID when userId is not provided', async () => {
       const roomId = 'test-room-id';
       const name = 'User without ID';
+      const callToken = {
+        token: 'test-call-token',
+        appId: 'jitsi-app-id',
+      };
 
       const roomMock = createMock<Room>(mockRoomData);
       roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
@@ -487,7 +506,7 @@ describe('CallUseCase', () => {
         .mockResolvedValueOnce(userWithoutId);
       jest
         .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce('test-token');
+        .mockReturnValueOnce(callToken);
 
       await callUseCase.joinCall(roomId, {
         name,
