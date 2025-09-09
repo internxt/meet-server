@@ -15,6 +15,7 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "cross-env NODE_ENV=test jest",
     "migrate": "cross-env NODE_ENV=development sequelize-cli db:migrate",
+    "migrate:prod": "cross-env NODE_ENV=production sequelize db:migrate",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
