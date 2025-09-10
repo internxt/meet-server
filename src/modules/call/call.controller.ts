@@ -124,13 +124,14 @@ export class CallController {
     @User() user: UserTokenData['payload'],
     @Body() joinCallDto?: JoinCallDto,
   ): Promise<JoinCallResponseDto> {
-    const { uuid } = user || {};
+    const { uuid, email } = user || {};
 
     return await this.callUseCase.joinCall(roomId, {
       userId: uuid,
       name: joinCallDto?.name,
       lastName: joinCallDto?.lastName,
       anonymous: joinCallDto?.anonymous || !user,
+      email: email,
     });
   }
 

@@ -136,6 +136,7 @@ export class CallUseCase {
       name?: string;
       lastName?: string;
       anonymous?: boolean;
+      email?: string;
     },
   ): Promise<JoinCallResponseDto> {
     try {
@@ -158,6 +159,7 @@ export class CallUseCase {
         roomId,
         !!roomUser.anonymous,
         isOwner,
+        processedUserData,
       );
 
       if (processedUserData.userId === room.hostId && room.isClosed) {
@@ -203,13 +205,15 @@ export class CallUseCase {
     name?: string;
     lastName?: string;
     anonymous?: boolean;
+    email?: string;
   }): {
     userId: string;
     name?: string;
     lastName?: string;
     anonymous: boolean;
+    email?: string;
   } {
-    const { userId, name, lastName, anonymous = false } = userData;
+    const { userId, name, lastName, anonymous = false, email } = userData;
 
     if (anonymous || !userId) {
       return {
@@ -225,6 +229,7 @@ export class CallUseCase {
       name,
       lastName,
       anonymous: false,
+      email,
     };
   }
 
