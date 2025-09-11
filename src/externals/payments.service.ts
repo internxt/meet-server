@@ -69,6 +69,7 @@ export class PaymentService {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${jwtToken}`,
+        'x-internxt-api-token': this.configService.get('apis.gatewayApiToken'),
       },
     };
 
