@@ -93,44 +93,64 @@ export class JitsiWebhookService {
   }
 
   /**
-   * Validates if a webhook request is from Jitsi
+   * Validates if a webhook request is from Jitsi using JaaS signature format
    * @param headers The request headers
-   * @param rawBody The raw request body (for signature validation)
+   * @param payload The webhook payload
    * @returns True if the request is valid
    */
   validateWebhookRequest(
     headers: Record<string, string>,
-    rawBody?: string,
+    payload: any,
   ): boolean {
     if (!this.webhookSecret) {
       this.logger.warn('Webhook secret not configured, skipping validation');
       return true;
     }
 
-    const signature = headers['x-jitsi-signature'];
+    const signature = headers['x-jaas-signature'];
     if (!signature) {
       this.logger.warn('No Jitsi signature found in headers');
       return false;
     }
 
-    if (!rawBody) {
-      this.logger.warn('No raw body provided for signature validation');
+    if (!payload) {
+      this.logger.warn('No payload provided for signature validation');
       return false;
     }
 
-    const hmac = crypto.createHmac('sha256', this.webhookSecret);
-    hmac.update(rawBody);
-    const expectedSignature = hmac.digest('hex');
+    try {
+      // Parse JaaS signature format: t=timestamp,v1=signature
+      const parts = signature.split(',');
+      let timestamp: string | undefined;
+      let v1Signature: string | undefined;
 
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature),
-    );
+      for (const part of parts) {
+        const [prefix, value] = part.split('=', 2);
+        if (prefix === 't' && value) {
+          timestamp = value;
+        } else if (prefix === 'v1' && value) {
+          v1Signature = value;
+        }
+      }
 
-    if (!isValid) {
-      this.logger.warn('Invalid webhook signature');
+      if (!timestamp || !v1Signature) {
+        this.logger.warn('Invalid JaaS signature format');
+        return false;
+      }
+
+      const signedPayload = `${timestamp}.${JSON.stringify(payload)}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', this.webhookSecret)
+        .update(signedPayload, 'utf8')
+        .digest('base64');
+
+      return crypto.timingSafeEqual(
+        Buffer.from(v1Signature, 'base64'),
+        Buffer.from(expectedSignature, 'base64'),
+      );
+    } catch (error) {
+      this.logger.error('Error validating webhook signature', error);
+      return false;
     }
-
-    return isValid;
   }
 }

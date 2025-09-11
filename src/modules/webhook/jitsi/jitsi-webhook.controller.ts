@@ -46,17 +46,10 @@ export class JitsiWebhookController {
   async handleWebhook(
     @Body() payload: any,
     @Headers() headers: Record<string, string>,
-    @Req() request: RequestWithRawBody,
   ): Promise<{ success: boolean }> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.logger.log(`Received webhook event: ${payload.eventType}`);
 
-    if (
-      !this.jitsiWebhookService.validateWebhookRequest(
-        headers,
-        request.rawBody?.toString(),
-      )
-    ) {
+    if (!this.jitsiWebhookService.validateWebhookRequest(headers, payload)) {
       this.logger.warn('Invalid webhook request');
       throw new UnauthorizedException('Invalid webhook request');
     }
