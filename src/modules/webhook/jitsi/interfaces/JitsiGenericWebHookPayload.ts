@@ -45,3 +45,65 @@ export interface JitsiGenericWebHookPayload<T = any> {
   fqn: string;
   data: T;
 }
+
+export interface JitsiParticipantLeftData {
+  moderator: boolean | 'true' | 'false';
+  name: string;
+  group?: string;
+  email?: string;
+  id?: string;
+  participantJid: string;
+  participantId: string;
+  avatar?: string;
+  disconnectReason:
+    | 'left'
+    | 'kicked'
+    | 'unknown'
+    | 'switch_room'
+    | 'unrecoverable_error';
+  isBreakout?: boolean;
+  breakoutRoomId?: string;
+}
+
+export type JitsiParticipantLeftWebHookPayload =
+  JitsiGenericWebHookPayload<JitsiParticipantLeftData>;
+
+export interface JitsiParticipantJoinedData {
+  moderator: boolean | 'true' | 'false';
+  name: string;
+  group?: string;
+  email?: string;
+  id?: string;
+  participantJid: string;
+  participantId: string;
+  avatar?: string;
+  isBreakout?: boolean;
+  breakoutRoomId?: string;
+}
+
+export type JitsiParticipantJoinedWebHookPayload =
+  JitsiGenericWebHookPayload<JitsiParticipantJoinedData>;
+
+export interface JitsiRoomCreatedData {
+  conference: string;
+  isBreakout?: boolean;
+  breakoutRoomId?: string;
+}
+
+export type JitsiRoomCreatedWebHookPayload =
+  JitsiGenericWebHookPayload<JitsiRoomCreatedData>;
+
+export interface JitsiRoomDestroyedData {
+  conference: string;
+  isBreakout?: boolean;
+  breakoutRoomId?: string;
+}
+
+export type JitsiRoomDestroyedWebHookPayload =
+  JitsiGenericWebHookPayload<JitsiRoomDestroyedData>;
+
+export type JitsiWebhookPayload =
+  | JitsiParticipantLeftWebHookPayload
+  | JitsiParticipantJoinedWebHookPayload
+  | JitsiRoomCreatedWebHookPayload
+  | JitsiRoomDestroyedWebHookPayload;
