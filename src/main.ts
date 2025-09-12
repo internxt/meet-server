@@ -8,19 +8,17 @@ import {
 import configuration from './config/configuration';
 import helmet from 'helmet';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ConsoleLogger } from '@nestjs/common';
+import { AppLoggerService } from './common/logger/pino-logger.service';
 
 const config = configuration();
 const APP_PORT = config.port || 3000;
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: new ConsoleLogger({
-      colors: config.isDevelopment,
-      prefix: 'meet-server',
-      compact: config.isProduction,
-    }),
+    bufferLogs: true,
   });
+
+  app.useLogger(app.get(AppLoggerService));
 
   app.enableCors();
   app.use(helmet());
