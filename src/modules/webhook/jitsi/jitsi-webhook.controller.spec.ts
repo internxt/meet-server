@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JitsiWebhookController } from './jitsi-webhook.controller';
-import { JitsiWebhookService } from './jitsi-webhook.service';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RequestWithRawBody } from './interfaces/request.interface';
+import { Test, TestingModule } from '@nestjs/testing';
+import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
+import { JitsiWebhookController } from './jitsi-webhook.controller';
+import { JitsiWebhookService } from './jitsi-webhook.service';
 
 describe('JitsiWebhookController', () => {
   let controller: JitsiWebhookController;
@@ -40,49 +40,43 @@ describe('JitsiWebhookController', () => {
   describe('handleWebhook', () => {
     it('should throw UnauthorizedException if webhook validation fails', async () => {
       const mockHeaders = { 'x-jitsi-signature': 'test-signature' };
-      const mockRequest = {
-        rawBody: Buffer.from('test-body'),
-      } as RequestWithRawBody;
-      const mockPayload = { eventType: 'PARTICIPANT_LEFT' };
+
+      const mockPayload = {
+        eventType: 'PARTICIPANT_LEFT',
+      } as unknown as JitsiWebhookPayload;
 
       jest.spyOn(service, 'validateWebhookRequest').mockReturnValue(false);
 
       await expect(
-        controller.handleWebhook(mockPayload, mockHeaders, mockRequest),
+        controller.handleWebhook(mockPayload, mockHeaders),
       ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw BadRequestException if payload is missing eventType', async () => {
       const mockHeaders = { 'x-jitsi-signature': 'test-signature' };
-      const mockRequest = {
-        rawBody: Buffer.from('test-body'),
-      } as RequestWithRawBody;
-      const mockPayload = {};
+
+      const mockPayload = {} as unknown as JitsiWebhookPayload;
 
       jest.spyOn(service, 'validateWebhookRequest').mockReturnValue(true);
 
       await expect(
-        controller.handleWebhook(mockPayload, mockHeaders, mockRequest),
+        controller.handleWebhook(mockPayload, mockHeaders),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should handle PARTICIPANT_LEFT event', async () => {
       const mockHeaders = { 'x-jitsi-signature': 'test-signature' };
-      const mockRequest = {
-        rawBody: Buffer.from('test-body'),
-      } as RequestWithRawBody;
-      const mockPayload = { eventType: 'PARTICIPANT_LEFT' };
+
+      const mockPayload = {
+        eventType: 'PARTICIPANT_LEFT',
+      } as unknown as JitsiWebhookPayload;
 
       jest.spyOn(service, 'validateWebhookRequest').mockReturnValue(true);
       jest
         .spyOn(service, 'handleParticipantLeft')
         .mockImplementation((): Promise<void> => Promise.resolve());
 
-      const result = await controller.handleWebhook(
-        mockPayload,
-        mockHeaders,
-        mockRequest,
-      );
+      const result = await controller.handleWebhook(mockPayload, mockHeaders);
 
       expect(result).toEqual({ success: true });
       expect(service.handleParticipantLeft).toHaveBeenCalledWith(mockPayload);
@@ -90,18 +84,14 @@ describe('JitsiWebhookController', () => {
 
     it('should ignore unhandled event types', async () => {
       const mockHeaders = { 'x-jitsi-signature': 'test-signature' };
-      const mockRequest = {
-        rawBody: Buffer.from('test-body'),
-      } as RequestWithRawBody;
-      const mockPayload = { eventType: 'SOME_OTHER_EVENT' };
+
+      const mockPayload = {
+        eventType: 'SOME_OTHER_EVENT',
+      } as unknown as JitsiWebhookPayload;
 
       jest.spyOn(service, 'validateWebhookRequest').mockReturnValue(true);
 
-      const result = await controller.handleWebhook(
-        mockPayload,
-        mockHeaders,
-        mockRequest,
-      );
+      const result = await controller.handleWebhook(mockPayload, mockHeaders);
 
       expect(result).toEqual({ success: true });
       expect(service.handleParticipantLeft).not.toHaveBeenCalled();
@@ -109,10 +99,9 @@ describe('JitsiWebhookController', () => {
 
     it('should throw BadRequestException if an error occurs during processing', async () => {
       const mockHeaders = { 'x-jitsi-signature': 'test-signature' };
-      const mockRequest = {
-        rawBody: Buffer.from('test-body'),
-      } as RequestWithRawBody;
-      const mockPayload = { eventType: 'PARTICIPANT_LEFT' };
+      const mockPayload = {
+        eventType: 'PARTICIPANT_LEFT',
+      } as unknown as JitsiWebhookPayload;
       const mockError = new Error('Test error');
 
       jest.spyOn(service, 'validateWebhookRequest').mockReturnValue(true);
@@ -121,7 +110,7 @@ describe('JitsiWebhookController', () => {
         .mockImplementation((): Promise<void> => Promise.reject(mockError));
 
       await expect(
-        controller.handleWebhook(mockPayload, mockHeaders, mockRequest),
+        controller.handleWebhook(mockPayload, mockHeaders),
       ).rejects.toThrow(BadRequestException);
     });
   });
