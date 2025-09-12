@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RoomUseCase } from '../../room/room.usecase';
 import * as crypto from 'crypto';
 import { RoomUserUseCase } from '../../room/room-user.usecase';
+import { RoomUseCase } from '../../room/room.usecase';
+import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 @Injectable()
 export class JitsiWebhookService {
@@ -100,7 +101,7 @@ export class JitsiWebhookService {
    */
   validateWebhookRequest(
     headers: Record<string, string>,
-    payload: any,
+    payload: JitsiWebhookPayload,
   ): boolean {
     if (!this.webhookSecret) {
       this.logger.warn('Webhook secret not configured, skipping validation');
