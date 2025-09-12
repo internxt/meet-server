@@ -7,6 +7,7 @@ export default () => ({
     payments: {
       url: process.env.PAYMENTS_URL,
     },
+    gatewayApiToken: process.env.GATEWAY_HEADER_TOKEN,
   },
   secrets: {
     jwt: process.env.JWT_SECRET,

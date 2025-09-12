@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -148,6 +149,10 @@ export class CallUseCase {
       const processedUserData = this.processUserData(userData);
       const isOwner = processedUserData.userId === room.hostId;
 
+      if (!isOwner && room.isClosed) {
+        throw new ForbiddenException('Room is closed');
+      }
+
       const roomUser = await this.roomUserUseCase.addUserToRoom(
         roomId,
         processedUserData,
@@ -177,7 +182,8 @@ export class CallUseCase {
         error instanceof BadRequestException ||
         error instanceof ConflictException ||
         error instanceof NotFoundException ||
-        error instanceof InternalServerErrorException
+        error instanceof InternalServerErrorException ||
+        error instanceof ForbiddenException
       ) {
         throw error;
       }

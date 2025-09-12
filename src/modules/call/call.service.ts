@@ -1,4 +1,9 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import jwt, { JwtHeader } from 'jsonwebtoken';
 import { v4 } from 'uuid';
 import configuration from '../../config/configuration';
@@ -46,7 +51,15 @@ export class CallService {
   private async getMeetFeatureConfigForUser(
     userUuid: string,
   ): Promise<Tier['featuresPerService']['meet']> {
-    const userFeatures = await this.paymentService.getUserTier(userUuid);
+    const userFeatures = await this.paymentService
+      .getUserTier(userUuid)
+      .catch((err) => {
+        Logger.error(
+          `Failed to retrieve user tier from payment service: ${err.message}`,
+        );
+        throw err;
+      });
+
     const meetFeature = userFeatures.featuresPerService.meet;
 
     return meetFeature;

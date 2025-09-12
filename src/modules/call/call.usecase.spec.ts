@@ -2,6 +2,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -51,7 +52,7 @@ describe('CallUseCase', () => {
   });
 
   describe('validateUserHasNoActiveRoom', () => {
-    it('should not throw when user has no active room', async () => {
+    it('when user has no active room, then it should not throw', async () => {
       const getOpenRoomByHostIdSpy = jest
         .spyOn(roomUseCase, 'getOpenRoomByHostId')
         .mockResolvedValueOnce(null);
@@ -66,7 +67,7 @@ describe('CallUseCase', () => {
       expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
     });
 
-    it('should throw ConflictException when user already has an active room', async () => {
+    it('when user already has an active room, then it should throw ConflictException', async () => {
       const getOpenRoomByHostIdSpy = jest
         .spyOn(roomUseCase, 'getOpenRoomByHostId')
         .mockResolvedValueOnce(createMock<Room>(mockRoomData));
@@ -81,7 +82,7 @@ describe('CallUseCase', () => {
       expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
     });
 
-    it('should throw InternalServerErrorException when an unexpected error occurs', async () => {
+    it('when an unexpected error occurs, then should throw InternalServerErrorException', async () => {
       const getOpenRoomByHostIdSpy = jest
         .spyOn(roomUseCase, 'getOpenRoomByHostId')
         .mockRejectedValueOnce(new Error('Database error'));
@@ -98,7 +99,7 @@ describe('CallUseCase', () => {
   });
 
   describe('createCallAndRoom', () => {
-    it('should create a call token and room successfully', async () => {
+    it('when creating call and room, then should create a call token and room successfully', async () => {
       const createCallTokenSpy = jest
         .spyOn(callService, 'createCallToken')
         .mockResolvedValueOnce(mockCallResponse);
@@ -117,7 +118,7 @@ describe('CallUseCase', () => {
       expect(result).toEqual(mockCallResponse);
     });
 
-    it('should propagate errors from call service', async () => {
+    it('when call service throws error, then should propagate errors', async () => {
       const error = new Error('Failed to create call');
       const createCallTokenSpy = jest
         .spyOn(callService, 'createCallToken')
@@ -132,7 +133,7 @@ describe('CallUseCase', () => {
   });
 
   describe('createRoomForCall', () => {
-    it('should create a room for the call successfully', async () => {
+    it('when creating room for call, then should create room successfully', async () => {
       const createRoomSpy = jest
         .spyOn(roomUseCase, 'createRoom')
         .mockResolvedValueOnce(createMock<Room>(mockRoomData));
@@ -150,7 +151,7 @@ describe('CallUseCase', () => {
       });
     });
 
-    it('should throw ConflictException when room creation fails', async () => {
+    it('when room creation fails, then should throw ConflictException', async () => {
       const createRoomSpy = jest
         .spyOn(roomUseCase, 'createRoom')
         .mockRejectedValueOnce(new Error('Room already exists'));
@@ -177,7 +178,7 @@ describe('CallUseCase', () => {
       email: mockUserPayload.email,
     };
 
-    it('should not throw for BadRequestException', () => {
+    it('when handling BadRequestException, then should not throw', () => {
       const error = new BadRequestException('Bad request');
 
       expect(() => {
@@ -185,7 +186,7 @@ describe('CallUseCase', () => {
       }).not.toThrow();
     });
 
-    it('should not throw for ConflictException', () => {
+    it('when handling ConflictException, then should not throw', () => {
       const error = new ConflictException('Conflict');
 
       expect(() => {
@@ -193,7 +194,7 @@ describe('CallUseCase', () => {
       }).not.toThrow();
     });
 
-    it('should not throw for InternalServerErrorException', () => {
+    it('when handling InternalServerErrorException, then should not throw', () => {
       const error = new InternalServerErrorException('Internal error');
 
       expect(() => {
@@ -201,7 +202,7 @@ describe('CallUseCase', () => {
       }).not.toThrow();
     });
 
-    it('should throw InternalServerErrorException for unknown errors', () => {
+    it('when handling unknown errors, then should throw', () => {
       const error = new Error('Unknown error');
 
       expect(() => {
@@ -240,7 +241,7 @@ describe('CallUseCase', () => {
       anonymous: true,
     });
 
-    it('should successfully join a call with registered user data', async () => {
+    it('when joining call with registered user data, then should join successfully', async () => {
       const userData = {
         userId,
         name: userName,
@@ -287,7 +288,7 @@ describe('CallUseCase', () => {
       });
     });
 
-    it('should successfully join a call as anonymous user', async () => {
+    it('when joining call as anonymous user, then should join successfully', async () => {
       const userData = {
         anonymous: true,
         name: userName,
@@ -334,7 +335,7 @@ describe('CallUseCase', () => {
       });
     });
 
-    it('should successfully join a call as host and open the room', async () => {
+    it('when joining call as host, then should join successfully and open the room', async () => {
       const userData = { userId: roomMock.hostId };
       roomMock.isClosed = true;
       jest
@@ -349,7 +350,7 @@ describe('CallUseCase', () => {
       expect(openRoomSpy).toHaveBeenCalledWith(roomId);
     });
 
-    it('should throw NotFoundException when room does not exist', async () => {
+    it('when room does not exist, then should throw NotFoundException', async () => {
       const userData = { userId };
       const getRoomByRoomIdSpy = jest
         .spyOn(roomUseCase, 'getRoomByRoomId')
@@ -362,13 +363,33 @@ describe('CallUseCase', () => {
       expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
     });
 
-    it('should propagate BadRequestException from roomUserUseCase', async () => {
+    it('when non-owner tries to join closed room, then should throw', async () => {
       const userData = { userId };
-      const error = new BadRequestException('Invalid user data');
+      const closedRoomMock = {
+        ...roomMock,
+        isClosed: true,
+        hostId: 'different-host-id',
+      };
 
       const getRoomByRoomIdSpy = jest
         .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(roomMock);
+        .mockResolvedValueOnce(closedRoomMock);
+
+      await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
+    });
+
+    it('when roomUserUseCase throws BadRequestException, then should propagate error', async () => {
+      const userData = { userId };
+      const error = new BadRequestException('Invalid user data');
+      const openRoomMock = { ...roomMock, isClosed: false };
+
+      const getRoomByRoomIdSpy = jest
+        .spyOn(roomUseCase, 'getRoomByRoomId')
+        .mockResolvedValueOnce(openRoomMock);
       const addUserToRoomSpy = jest
         .spyOn(roomUserUseCase, 'addUserToRoom')
         .mockRejectedValueOnce(error);
@@ -387,11 +408,12 @@ describe('CallUseCase', () => {
       );
     });
 
-    it('should propagate ConflictException from roomUserUseCase', async () => {
+    it('when roomUserUseCase throws ConflictException, then should propagate error', async () => {
       const userData = { userId };
       const error = new ConflictException('User already in room');
+      const openRoomMock = { ...roomMock, isClosed: false };
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
       roomUserUseCase.addUserToRoom.mockRejectedValueOnce(error);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
@@ -399,12 +421,11 @@ describe('CallUseCase', () => {
       );
     });
 
-    it('should throw InternalServerErrorException for unknown errors', async () => {
+    it('When there is an unknown error, then throw an internal server error', async () => {
       const userData = { userId };
       const error = new Error('Unknown error');
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
-      roomUserUseCase.addUserToRoom.mockRejectedValueOnce(error);
+      roomUseCase.getRoomByRoomId.mockRejectedValueOnce(error);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
         InternalServerErrorException,
@@ -556,7 +577,7 @@ describe('CallUseCase', () => {
       roomUseCase.removeRoom.mockResolvedValue();
     });
 
-    it('should throw BadRequestException when userId is not provided', async () => {
+    it('when userId is not provided, then should throw', async () => {
       await expect(callUseCase.leaveCall(roomId, undefined)).rejects.toThrow(
         BadRequestException,
       );
@@ -565,7 +586,7 @@ describe('CallUseCase', () => {
       expect(roomUserUseCase.removeUserFromRoom).not.toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException when room does not exist', async () => {
+    it('when room does not exist, then should throw', async () => {
       roomUseCase.getRoomByRoomId.mockResolvedValueOnce(null);
 
       await expect(
@@ -577,7 +598,7 @@ describe('CallUseCase', () => {
       expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
     });
 
-    it('should remove user and close room when host leaves a non-empty room', async () => {
+    it('when host leaves a non-empty room, then should remove user and close room', async () => {
       roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
 
       await callUseCase.leaveCall(roomId, hostId);
@@ -592,7 +613,7 @@ describe('CallUseCase', () => {
       expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
     });
 
-    it('should remove user and delete room when the last user (host) leaves', async () => {
+    it('when the last user (host) leaves, then should remove user and delete room', async () => {
       roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(0);
 
       await callUseCase.leaveCall(roomId, hostId);
@@ -607,7 +628,7 @@ describe('CallUseCase', () => {
       expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
     });
 
-    it('should remove user and delete room when the last user (participant) leaves', async () => {
+    it('when the last user (participant) leaves, then should remove user and delete room', async () => {
       roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(0);
 
       await callUseCase.leaveCall(roomId, participantId);
@@ -622,7 +643,7 @@ describe('CallUseCase', () => {
       expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
     });
 
-    it('should remove user but not close or delete room when a participant leaves a non-empty room', async () => {
+    it('when a participant leaves a non-empty room, then should remove user but not close or delete room', async () => {
       roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(2);
 
       await callUseCase.leaveCall(roomId, participantId);
@@ -637,7 +658,7 @@ describe('CallUseCase', () => {
       expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
     });
 
-    it('should successfully leave a call as host and close the room', async () => {
+    it('when host leaves call, then should leave successfully and close the room', async () => {
       roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
       roomMock.hostId = hostId;
 
@@ -653,7 +674,7 @@ describe('CallUseCase', () => {
       expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
     });
 
-    it('should successfully leave a call with anonymous user ID', async () => {
+    it('when anonymous user leaves call, then should leave successfully', async () => {
       roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
 
       await callUseCase.leaveCall(roomId, anonymousUserId);
@@ -666,7 +687,7 @@ describe('CallUseCase', () => {
       expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
     });
 
-    it('should handle errors during leave call operation', async () => {
+    it('when error occurs during leave call operation, then should handle errors', async () => {
       const error = new Error('Database error');
       roomUseCase.getRoomByRoomId.mockRejectedValueOnce(error);
 
@@ -675,7 +696,7 @@ describe('CallUseCase', () => {
       ).rejects.toThrow(InternalServerErrorException);
     });
 
-    it('should propagate BadRequestException from roomUserUseCase', async () => {
+    it('when roomUserUseCase throws, then should propagate error', async () => {
       const error = new BadRequestException('Invalid user');
       roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
       roomUserUseCase.removeUserFromRoom.mockRejectedValueOnce(error);
