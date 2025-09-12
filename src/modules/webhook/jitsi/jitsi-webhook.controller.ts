@@ -10,9 +10,9 @@ import {
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   JitsiGenericWebHookEvent,
-  JitsiParticipantLeftWebHookPayload,
   JitsiWebhookPayload,
 } from './interfaces/JitsiGenericWebHookPayload';
+import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { JitsiWebhookService } from './jitsi-webhook.service';
 
 @ApiTags('Jitsi Webhook')

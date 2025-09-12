@@ -1,3 +1,5 @@
+import { JitsiParticipantLeftWebHookPayload } from './JitsiParticipantLeftData';
+
 export enum JitsiGenericWebHookEvent {
   ROOM_CREATED = 'ROOM_CREATED',
   PARTICIPANT_LEFT = 'PARTICIPANT_LEFT',
@@ -45,28 +47,6 @@ export interface JitsiGenericWebHookPayload<T = any> {
   fqn: string;
   data: T;
 }
-
-export interface JitsiParticipantLeftData {
-  moderator: boolean | 'true' | 'false';
-  name: string;
-  group?: string;
-  email?: string;
-  id?: string;
-  participantJid: string;
-  participantId: string;
-  avatar?: string;
-  disconnectReason:
-    | 'left'
-    | 'kicked'
-    | 'unknown'
-    | 'switch_room'
-    | 'unrecoverable_error';
-  isBreakout?: boolean;
-  breakoutRoomId?: string;
-}
-
-export type JitsiParticipantLeftWebHookPayload =
-  JitsiGenericWebHookPayload<JitsiParticipantLeftData>;
 
 export interface JitsiParticipantJoinedData {
   moderator: boolean | 'true' | 'false';

@@ -6,17 +6,17 @@ export interface JitsiParticipantLeftData {
   group?: string;
   email?: string;
   id?: string;
-  participantJid?: string;
+  participantJid: string;
   participantId: string;
   avatar?: string;
-  disconnectReason?:
+  disconnectReason:
     | 'left'
     | 'kicked'
     | 'unknown'
     | 'switch_room'
     | 'unrecoverable_error';
-  participantName?: string;
-  endpointId?: string;
+  isBreakout?: boolean;
+  breakoutRoomId?: string;
 }
 
 export type JitsiParticipantLeftWebHookPayload =
