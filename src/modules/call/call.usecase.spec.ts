@@ -443,8 +443,11 @@ describe('CallUseCase', () => {
         token: 'test-call-token',
         appId: 'jitsi-app-id',
       };
-      const roomMock = createMock<Room>(mockRoomData);
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      const openRoomMock = createMock<Room>({
+        ...mockRoomData,
+        isClosed: false,
+      });
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
       const registeredRoomUser = new RoomUser({
         id: 1,
@@ -490,8 +493,11 @@ describe('CallUseCase', () => {
         appId: 'jitsi-app-id',
       };
 
-      const roomMock = createMock<Room>(mockRoomData);
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      const openRoomMock = createMock<Room>({
+        ...mockRoomData,
+        isClosed: false,
+      });
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
       const anonymousRoomUser = new RoomUser({
         id: 1,
@@ -530,8 +536,11 @@ describe('CallUseCase', () => {
         appId: 'jitsi-app-id',
       };
 
-      const roomMock = createMock<Room>(mockRoomData);
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      const openRoomMock = createMock<Room>({
+        ...mockRoomData,
+        isClosed: false,
+      });
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
       const userWithoutId = new RoomUser({
         id: 1,

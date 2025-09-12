@@ -150,6 +150,7 @@ describe('Call service', () => {
         roomId,
         isAnonymous,
         isModerator,
+        { name: 'Mod', lastName: 'Erator', email: 'test@inxt.com' },
       );
 
       expect(result).toStrictEqual({

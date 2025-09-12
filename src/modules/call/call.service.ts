@@ -14,8 +14,8 @@ import {
   getJitsiJWTSecret,
 } from '../../lib/jitsi';
 import { UserTokenData } from '../auth/dto/user.dto';
-import { User } from '../user/user.domain';
 import { UserDataForToken } from '../user/user.attributes';
+import { User } from '../user/user.domain';
 
 export function SignWithRS256AndHeader(
   payload: object,
@@ -55,7 +55,8 @@ export class CallService {
       .getUserTier(userUuid)
       .catch((err) => {
         Logger.error(
-          `Failed to retrieve user tier from payment service: ${err.message}`,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          `Failed to retrieve user tier from payment service: ${err?.message}`,
         );
         throw err;
       });

@@ -1,14 +1,17 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { JitsiWebhookService } from './jitsi-webhook.service';
-import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
-import { ConfigService } from '@nestjs/config';
-import { RoomUseCase } from '../../room/room.usecase';
-import { RoomUserUseCase } from '../../room/room-user.usecase';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
-import { JitsiGenericWebHookEvent } from './interfaces/JitsiGenericWebHookPayload';
+import { RoomUserUseCase } from '../../room/room-user.usecase';
 import { Room } from '../../room/room.domain';
+import { RoomUseCase } from '../../room/room.usecase';
+import {
+  JitsiGenericWebHookEvent,
+  JitsiWebhookPayload,
+} from './interfaces/JitsiGenericWebHookPayload';
+import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
+import { JitsiWebhookService } from './jitsi-webhook.service';
 
 jest.mock('crypto', () => {
   const originalModule = jest.requireActual<typeof import('crypto')>('crypto');
@@ -257,6 +260,10 @@ describe('JitsiWebhookService', () => {
   });
 
   describe('validateWebhookRequest', () => {
+    const mockPayload = {
+      eventType: 'PARTICIPANT_LEFT',
+    } as unknown as JitsiWebhookPayload;
+
     it('should skip validation if webhook secret is not configured', () => {
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.secret') return undefined;
@@ -270,9 +277,8 @@ describe('JitsiWebhookService', () => {
       );
 
       const headers = { 'content-type': 'application/json' };
-      const rawBody = JSON.stringify({ test: 'data' });
 
-      expect(service.validateWebhookRequest(headers, rawBody)).toBe(true);
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(true);
     });
 
     it('should fail validation if signature is missing', () => {
@@ -290,7 +296,7 @@ describe('JitsiWebhookService', () => {
       const headers = { 'content-type': 'application/json' };
       const rawBody = JSON.stringify({ test: 'data' });
 
-      expect(service.validateWebhookRequest(headers, rawBody)).toBe(false);
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
     });
 
     it('should fail validation if raw body is missing', () => {
@@ -307,10 +313,10 @@ describe('JitsiWebhookService', () => {
 
       const headers = {
         'content-type': 'application/json',
-        'x-jitsi-signature': 'signature',
+        'x-jaas-signature': 'signature',
       };
 
-      expect(service.validateWebhookRequest(headers)).toBe(false);
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
     });
 
     it('should validate correctly with valid signature', () => {
@@ -326,17 +332,17 @@ describe('JitsiWebhookService', () => {
         roomUserUseCase,
       );
 
-      const rawBody = JSON.stringify({ test: 'data' });
-      const signature = 'mocked-signature';
+      const signature =
+        't=1757430085,v1=LnyXpAysJpOLDj6kZ43+QrzcqpXcPW/do7LlSCfhVVs=';
 
       const headers = {
         'content-type': 'application/json',
-        'x-jitsi-signature': signature,
+        'x-jaas-signature': signature,
       };
 
       (crypto.timingSafeEqual as jest.Mock).mockReturnValue(true);
 
-      expect(service.validateWebhookRequest(headers, rawBody)).toBe(true);
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(true);
     });
 
     it('should fail validation with invalid signature', () => {
@@ -352,15 +358,14 @@ describe('JitsiWebhookService', () => {
         roomUserUseCase,
       );
 
-      const rawBody = JSON.stringify({ test: 'data' });
       const headers = {
         'content-type': 'application/json',
-        'x-jitsi-signature': 'invalid-signature',
+        'x-jaas-signature': 'invalid-signature',
       };
 
       (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
 
-      expect(service.validateWebhookRequest(headers, rawBody)).toBe(false);
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
     });
   });
 });
