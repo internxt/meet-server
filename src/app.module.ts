@@ -7,6 +7,7 @@ import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { format } from 'sql-formatter';
 import { UserModule } from './modules/user/user.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
+import { LoggerModule } from './common/logger/logger.module';
 
 const defaultDbConfig = (
   configService: ConfigService,
@@ -49,6 +50,7 @@ const defaultDbConfig = (
       load: [configuration],
       isGlobal: true,
     }),
+    LoggerModule,
     SequelizeModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
