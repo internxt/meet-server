@@ -6,6 +6,7 @@ import configuration from './config/configuration';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { format } from 'sql-formatter';
 import { UserModule } from './modules/user/user.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 
 const defaultDbConfig = (
   configService: ConfigService,
@@ -75,6 +76,7 @@ const defaultDbConfig = (
     }),
     CallModule,
     UserModule,
+    WebhookModule,
   ],
   controllers: [],
 })

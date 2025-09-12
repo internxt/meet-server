@@ -13,6 +13,10 @@ import {
   getJitsiJWTPayload,
   getJitsiJWTSecret,
 } from '../../lib/jitsi';
+import { UserTokenData } from '../auth/dto/user.dto';
+import { UserDataForToken } from '../user/user.attributes';
+import { User } from '../user/user.domain';
+
 export function SignWithRS256AndHeader(
   payload: object,
   secret: string,
@@ -51,7 +55,8 @@ export class CallService {
       .getUserTier(userUuid)
       .catch((err) => {
         Logger.error(
-          `Failed to retrieve user tier from payment service: ${err.message}`,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          `Failed to retrieve user tier from payment service: ${err?.message}`,
         );
         throw err;
       });
@@ -61,8 +66,8 @@ export class CallService {
     return meetFeature;
   }
 
-  async createCallToken(userUuid: string) {
-    const meetFeatures = await this.getMeetFeatureConfigForUser(userUuid);
+  async createCallToken(user: User | UserTokenData['payload']) {
+    const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
 
     if (!meetFeatures.enabled)
       throw new UnauthorizedException(
@@ -72,9 +77,9 @@ export class CallService {
     const newRoom = v4();
     const token = generateJitsiJWT(
       {
-        id: userUuid,
-        email: 'example@inxt.com',
-        name: 'Example',
+        id: user.uuid,
+        email: user.email,
+        name: `${user.name} ${user.lastname}`,
       },
       newRoom,
       true,
@@ -93,12 +98,13 @@ export class CallService {
     roomId: string,
     isAnonymous: boolean,
     isModerator: boolean,
+    user?: UserDataForToken,
   ) {
     const token = generateJitsiJWT(
       {
         id: userId,
-        email: isAnonymous ? 'anonymous@inxt.com' : 'user@inxt.com',
-        name: isAnonymous ? 'Anonymous' : 'User',
+        email: isAnonymous ? 'anonymous@inxt.com' : user.email,
+        name: isAnonymous ? 'Anonymous' : `${user.name} ${user?.lastName}`,
       },
       roomId,
       isModerator,

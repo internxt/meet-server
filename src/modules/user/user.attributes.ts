@@ -11,3 +11,9 @@ export interface UserAttributes {
   updatedAt?: Date;
   createdAt?: Date;
 }
+
+export interface UserDataForToken {
+  name?: string;
+  email?: string;
+  lastName?: string;
+}

@@ -8,12 +8,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
+import { UserTokenData } from '../auth/dto/user.dto';
 import { RoomUserUseCase } from '../room/room-user.usecase';
 import { Room } from '../room/room.domain';
 import { RoomUseCase } from '../room/room.usecase';
+import { User } from '../user/user.domain';
 import { CallService } from './call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallResponseDto } from './dto/join-call.dto';
+
 @Injectable()
 export class CallUseCase {
   private readonly logger = new Logger(CallUseCase.name);
@@ -54,19 +57,18 @@ export class CallUseCase {
   }
 
   async createCallAndRoom(
-    uuid: string,
-    email: string,
+    user: User | UserTokenData['payload'],
   ): Promise<CreateCallResponseDto> {
     try {
-      const call = await this.callService.createCallToken(uuid);
-      await this.createRoomForCall(call, uuid, email);
-      this.logger.log(`Successfully created call for user: ${email}`);
+      const call = await this.callService.createCallToken(user);
+      await this.createRoomForCall(call, user.uuid, user.email);
+      this.logger.log(`Successfully created call for user: ${user.email}`);
       return call;
     } catch (error) {
       const err = error as Error;
       this.logger.error(
         `Failed to create call and room: ${err.message}`,
-        { userId: uuid, email },
+        { userId: user.uuid, email: user.email },
         err.stack,
       );
       throw err;
@@ -135,6 +137,7 @@ export class CallUseCase {
       name?: string;
       lastName?: string;
       anonymous?: boolean;
+      email?: string;
     },
   ): Promise<JoinCallResponseDto> {
     try {
@@ -161,6 +164,7 @@ export class CallUseCase {
         roomId,
         !!roomUser.anonymous,
         isOwner,
+        processedUserData,
       );
 
       if (processedUserData.userId === room.hostId && room.isClosed) {
@@ -207,13 +211,15 @@ export class CallUseCase {
     name?: string;
     lastName?: string;
     anonymous?: boolean;
+    email?: string;
   }): {
     userId: string;
     name?: string;
     lastName?: string;
     anonymous: boolean;
+    email?: string;
   } {
-    const { userId, name, lastName, anonymous = false } = userData;
+    const { userId, name, lastName, anonymous = false, email } = userData;
 
     if (anonymous || !userId) {
       return {
@@ -229,6 +235,7 @@ export class CallUseCase {
       name,
       lastName,
       anonymous: false,
+      email,
     };
   }
 

@@ -98,8 +98,7 @@ describe('Testing Call Endpoints', () => {
         mockUserToken.payload.email,
       );
       expect(callUseCase.createCallAndRoom).toHaveBeenCalledWith(
-        mockUserToken.payload.uuid,
-        mockUserToken.payload.email,
+        mockUserToken.payload,
       );
       expect(result).toEqual(mockResponse);
     });
@@ -143,6 +142,7 @@ describe('Testing Call Endpoints', () => {
       expect(result).toEqual(mockJoinCallResponse);
       expect(callUseCase.joinCall).toHaveBeenCalledWith(mockRoomId, {
         userId: user.uuid,
+        email: user.email,
         name: mockJoinCallDto.name,
         lastName: mockJoinCallDto.lastName,
         anonymous: mockJoinCallDto.anonymous,
@@ -161,6 +161,7 @@ describe('Testing Call Endpoints', () => {
       expect(result).toEqual(mockJoinCallResponse);
       expect(callUseCase.joinCall).toHaveBeenCalledWith(mockRoomId, {
         userId: undefined,
+        email: mockJoinCallDto.email,
         name: mockJoinCallDto.name,
         lastName: mockJoinCallDto.lastName,
         anonymous: true,
@@ -185,6 +186,7 @@ describe('Testing Call Endpoints', () => {
         name: anonymousDto.name,
         lastName: anonymousDto.lastName,
         anonymous: true,
+        email: mockUserPayload.email,
       });
     });
 
@@ -252,6 +254,7 @@ describe('Testing Call Endpoints', () => {
 
       expect(callUseCase.joinCall).toHaveBeenCalledWith(mockRoomId, {
         userId: mockUserToken.payload.uuid,
+        email: mockUserToken.payload.email,
         name: undefined,
         lastName: undefined,
         anonymous: false,

@@ -17,6 +17,13 @@ export default () => ({
     appId: process.env.JITSI_APP_ID,
     apiKey: process.env.JITSI_API_KEY,
   },
+  jitsiWebhook: {
+    secret: process.env.JITSI_WEBHOOK_SECRET,
+    events: {
+      participantLeft:
+        process.env.JITSI_WEBHOOK_PARTICIPANT_LEFT_ENABLED === 'true',
+    },
+  },
   database: {
     host: process.env.DB_HOSTNAME,
     host2: process.env.DB_HOSTNAME2,

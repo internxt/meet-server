@@ -71,7 +71,7 @@ export class CallController {
 
     try {
       await this.callUseCase.validateUserHasNoActiveRoom(uuid, email);
-      const call = await this.callUseCase.createCallAndRoom(uuid, email);
+      const call = await this.callUseCase.createCallAndRoom(user);
       return call;
     } catch (error) {
       const err = error as Error;
@@ -124,13 +124,14 @@ export class CallController {
     @User() user: UserTokenData['payload'],
     @Body() joinCallDto?: JoinCallDto,
   ): Promise<JoinCallResponseDto> {
-    const { uuid } = user || {};
+    const { uuid, email } = user || {};
 
     return await this.callUseCase.joinCall(roomId, {
       userId: uuid,
       name: joinCallDto?.name,
       lastName: joinCallDto?.lastName,
       anonymous: joinCallDto?.anonymous || !user,
+      email: email,
     });
   }
 

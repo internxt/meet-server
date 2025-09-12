@@ -15,6 +15,10 @@ import { CallService } from './call.service';
 import { CallUseCase } from './call.usecase';
 import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
 
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'generated-uuid'),
+}));
+
 describe('CallUseCase', () => {
   let callUseCase: CallUseCase;
   let callService: DeepMocked<CallService>;
@@ -103,12 +107,9 @@ describe('CallUseCase', () => {
         .spyOn(callUseCase, 'createRoomForCall')
         .mockResolvedValueOnce();
 
-      const result = await callUseCase.createCallAndRoom(
-        mockUserPayload.uuid,
-        mockUserPayload.email,
-      );
+      const result = await callUseCase.createCallAndRoom(mockUserPayload);
 
-      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
       expect(createRoomForCallSpy).toHaveBeenCalledWith(
         mockCallResponse,
         mockUserPayload.uuid,
@@ -124,13 +125,10 @@ describe('CallUseCase', () => {
         .mockRejectedValueOnce(error);
 
       await expect(
-        callUseCase.createCallAndRoom(
-          mockUserPayload.uuid,
-          mockUserPayload.email,
-        ),
+        callUseCase.createCallAndRoom(mockUserPayload),
       ).rejects.toThrow(error);
 
-      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
     });
   });
 
@@ -274,6 +272,13 @@ describe('CallUseCase', () => {
         roomId,
         false,
         false,
+        {
+          anonymous: false,
+          email: undefined,
+          lastName: 'Last Name',
+          name: 'Test User',
+          userId: 'test-user-id',
+        },
       );
       expect(result).toEqual({
         token: callToken.token,
@@ -314,6 +319,13 @@ describe('CallUseCase', () => {
         roomId,
         true,
         false,
+        {
+          anonymous: true,
+          email: undefined,
+          lastName: undefined,
+          name: userData.name,
+          userId: anonymousUserMock.userId,
+        },
       );
       expect(result).toEqual({
         token: callToken.token,
@@ -417,6 +429,144 @@ describe('CallUseCase', () => {
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
         InternalServerErrorException,
+      );
+    });
+  });
+
+  describe('processUserData', () => {
+    it('should handle registered user data correctly', async () => {
+      const roomId = 'test-room-id';
+      const userId = 'test-user-id';
+      const name = 'Test User';
+      const lastName = 'Last Name';
+      const callToken = {
+        token: 'test-call-token',
+        appId: 'jitsi-app-id',
+      };
+      const openRoomMock = createMock<Room>({
+        ...mockRoomData,
+        isClosed: false,
+      });
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+
+      const registeredRoomUser = new RoomUser({
+        id: 1,
+        roomId,
+        userId,
+        name,
+        lastName,
+        anonymous: false,
+      });
+
+      roomUserUseCase.addUserToRoom.mockResolvedValueOnce(registeredRoomUser);
+      const createCallTokenForParticipantSpy = jest
+        .spyOn(callService, 'createCallTokenForParticipant')
+        .mockReturnValueOnce(callToken);
+
+      await callUseCase.joinCall(roomId, {
+        userId,
+        name,
+        lastName,
+        anonymous: false,
+      });
+
+      expect(createCallTokenForParticipantSpy).toHaveBeenCalledWith(
+        userId,
+        roomId,
+        false,
+        false,
+        {
+          anonymous: false,
+          email: undefined,
+          lastName: 'Last Name',
+          name: 'Test User',
+          userId: 'test-user-id',
+        },
+      );
+    });
+
+    it('should handle anonymous user data correctly', async () => {
+      const roomId = 'test-room-id';
+      const name = 'Anonymous User';
+      const callToken = {
+        token: 'test-call-token',
+        appId: 'jitsi-app-id',
+      };
+
+      const openRoomMock = createMock<Room>({
+        ...mockRoomData,
+        isClosed: false,
+      });
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+
+      const anonymousRoomUser = new RoomUser({
+        id: 1,
+        roomId,
+        userId: 'generated-id',
+        name,
+        anonymous: true,
+      });
+
+      const addUserToRoomSpy = jest
+        .spyOn(roomUserUseCase, 'addUserToRoom')
+        .mockResolvedValueOnce(anonymousRoomUser);
+      jest
+        .spyOn(callService, 'createCallTokenForParticipant')
+        .mockReturnValueOnce(callToken);
+
+      await callUseCase.joinCall(roomId, {
+        name,
+        anonymous: true,
+      });
+
+      expect(addUserToRoomSpy).toHaveBeenCalledWith(
+        roomId,
+        expect.objectContaining({
+          name,
+          anonymous: true,
+        }),
+      );
+    });
+
+    it('should generate user ID when userId is not provided', async () => {
+      const roomId = 'test-room-id';
+      const name = 'User without ID';
+      const callToken = {
+        token: 'test-call-token',
+        appId: 'jitsi-app-id',
+      };
+
+      const openRoomMock = createMock<Room>({
+        ...mockRoomData,
+        isClosed: false,
+      });
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+
+      const userWithoutId = new RoomUser({
+        id: 1,
+        roomId,
+        userId: 'generated-id',
+        name,
+        anonymous: true,
+      });
+
+      const addUserToRoomSpy = jest
+        .spyOn(roomUserUseCase, 'addUserToRoom')
+        .mockResolvedValueOnce(userWithoutId);
+      jest
+        .spyOn(callService, 'createCallTokenForParticipant')
+        .mockReturnValueOnce(callToken);
+
+      await callUseCase.joinCall(roomId, {
+        name,
+      });
+
+      expect(addUserToRoomSpy).toHaveBeenCalledWith(
+        roomId,
+        expect.objectContaining({
+          name,
+          anonymous: true,
+        }),
       );
     });
   });
