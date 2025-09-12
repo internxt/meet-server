@@ -64,6 +64,9 @@ export class JitsiWebhookService {
         return;
       }
 
+      const isOwner = participantId === room.hostId;
+      if (isOwner) await this.roomUseCase.closeRoom(roomId);
+
       await this.roomUserUseCase.removeUserFromRoom(participantId, room);
 
       this.logger.log(

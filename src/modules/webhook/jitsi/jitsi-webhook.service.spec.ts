@@ -117,6 +117,108 @@ describe('JitsiWebhookService', () => {
       );
     });
 
+    it('should close room when participant owner left the call', async () => {
+      configService.get.mockImplementation((key) => {
+        if (key === 'jitsiWebhook.events.participantLeft') return true;
+        return undefined;
+      });
+
+      const ownerRoom = new Room({
+        id: 'test-room-id',
+        hostId: 'test-participant-id',
+        maxUsersAllowed: 10,
+        isClosed: false,
+      });
+
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(ownerRoom);
+
+      const mockEvent: JitsiParticipantLeftWebHookPayload = {
+        idempotencyKey: 'test-key',
+        customerId: 'customer-id',
+        appId: 'app-id',
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
+        sessionId: 'session-id',
+        timestamp: Date.now(),
+        fqn: 'app-id/test-room-id',
+        data: {
+          moderator: 'false',
+          name: 'Test User',
+          disconnectReason: 'left',
+          id: 'test-participant-id',
+          participantJid: 'test-jid',
+          participantId: 'test-participant-id',
+        },
+      };
+
+      const closeRoomSpy = jest
+        .spyOn(roomUseCase, 'closeRoom')
+        .mockResolvedValueOnce(undefined);
+
+      const removeUserFromRoomSpy = jest
+        .spyOn(roomUserUseCase, 'removeUserFromRoom')
+        .mockResolvedValueOnce(undefined);
+
+      await service.handleParticipantLeft(mockEvent);
+
+      expect(closeRoomSpy).toHaveBeenCalledWith('test-room-id');
+
+      expect(removeUserFromRoomSpy).toHaveBeenCalledWith(
+        'test-participant-id',
+        ownerRoom,
+      );
+    });
+
+    it('should not close room when participant that is not the owner left the call', async () => {
+      configService.get.mockImplementation((key) => {
+        if (key === 'jitsiWebhook.events.participantLeft') return true;
+        return undefined;
+      });
+
+      const ownerRoom = new Room({
+        id: 'test-room-id',
+        hostId: 'test-participant-id-not-owner',
+        maxUsersAllowed: 10,
+        isClosed: false,
+      });
+
+      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(ownerRoom);
+
+      const mockEvent: JitsiParticipantLeftWebHookPayload = {
+        idempotencyKey: 'test-key',
+        customerId: 'customer-id',
+        appId: 'app-id',
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
+        sessionId: 'session-id',
+        timestamp: Date.now(),
+        fqn: 'app-id/test-room-id',
+        data: {
+          moderator: 'false',
+          name: 'Test User',
+          disconnectReason: 'left',
+          id: 'test-participant-id',
+          participantJid: 'test-jid',
+          participantId: 'test-participant-id',
+        },
+      };
+
+      const closeRoomSpy = jest
+        .spyOn(roomUseCase, 'closeRoom')
+        .mockResolvedValueOnce(undefined);
+
+      const removeUserFromRoomSpy = jest
+        .spyOn(roomUserUseCase, 'removeUserFromRoom')
+        .mockResolvedValueOnce(undefined);
+
+      await service.handleParticipantLeft(mockEvent);
+
+      expect(closeRoomSpy).not.toHaveBeenCalled();
+
+      expect(removeUserFromRoomSpy).toHaveBeenCalledWith(
+        'test-participant-id',
+        ownerRoom,
+      );
+    });
+
     it('should skip handling when participantLeftEnabled is false', async () => {
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.events.participantLeft') return false;
