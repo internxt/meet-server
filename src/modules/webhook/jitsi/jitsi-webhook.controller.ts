@@ -1,18 +1,19 @@
 import {
-  Controller,
-  Post,
+  BadRequestException,
   Body,
+  Controller,
   Headers,
   Logger,
-  BadRequestException,
+  Post,
   UnauthorizedException,
-  Req,
 } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  JitsiGenericWebHookEvent,
+  JitsiParticipantLeftWebHookPayload,
+  JitsiWebhookPayload,
+} from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiWebhookService } from './jitsi-webhook.service';
-
-import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
-import { RequestWithRawBody } from './interfaces/request.interface';
-import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 
 @ApiTags('Jitsi Webhook')
 @Controller('webhook/jitsi')
@@ -44,40 +45,31 @@ export class JitsiWebhookController {
     description: 'Unauthorized webhook request',
   })
   async handleWebhook(
-    @Body() payload: any,
+    @Body() payload: JitsiWebhookPayload,
     @Headers() headers: Record<string, string>,
-    @Req() request: RequestWithRawBody,
   ): Promise<{ success: boolean }> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.logger.log(`Received webhook event: ${payload.eventType}`);
 
-    if (
-      !this.jitsiWebhookService.validateWebhookRequest(
-        headers,
-        request.rawBody?.toString(),
-      )
-    ) {
+    if (!this.jitsiWebhookService.validateWebhookRequest(headers, payload)) {
       this.logger.warn('Invalid webhook request');
       throw new UnauthorizedException('Invalid webhook request');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (!payload?.eventType) {
       this.logger.warn('Invalid payload: missing eventType');
       throw new BadRequestException('Invalid payload: missing eventType');
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       switch (payload.eventType) {
-        case 'PARTICIPANT_LEFT':
+        case JitsiGenericWebHookEvent.PARTICIPANT_LEFT:
           await this.jitsiWebhookService.handleParticipantLeft(
             payload as JitsiParticipantLeftWebHookPayload,
           );
           break;
+
         default:
           this.logger.log(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             `Ignoring unhandled event type: ${payload.eventType}`,
           );
           break;
