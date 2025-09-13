@@ -1,18 +1,18 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomUserUseCase } from './room-user.usecase';
-import { SequelizeRoomUserRepository } from './room-user.repository';
+import { SequelizeRoomUserRepository } from './infrastructure/room-user.repository';
 import { RoomUseCase } from './room.usecase';
-import { RoomUser } from './room-user.domain';
-import { Room } from './room.domain';
+import { RoomUser } from './domain/room-user.domain';
+import { Room } from './domain/room.domain';
 import {
   BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { UserRepository } from '../user/user.repository';
-import { createMockUser } from '../user/fixtures';
+import { UserRepository } from '../../shared/user/user.repository';
+import { createMockUser } from '../../shared/user/fixtures';
 import { AvatarService } from '../../externals/avatar/avatar.service';
 
 jest.mock('uuid');

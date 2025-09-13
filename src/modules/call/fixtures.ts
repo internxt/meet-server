@@ -1,6 +1,6 @@
 import { Chance } from 'chance';
 import { UserTokenData } from '../auth/dto/user.dto';
-import { Room } from '../room/room.domain';
+import { Room } from './domain/room.domain';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 
 const randomDataGenerator = new Chance();

@@ -5,8 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { format } from 'sql-formatter';
-import { UserModule } from './modules/user/user.module';
-import { WebhookModule } from './modules/webhook/webhook.module';
+import { SharedModule } from './shared/shared.module';
 import { LoggerModule } from './common/logger/logger.module';
 
 const defaultDbConfig = (
@@ -77,8 +76,7 @@ const defaultDbConfig = (
       }),
     }),
     CallModule,
-    UserModule,
-    WebhookModule,
+    SharedModule,
   ],
   controllers: [],
 })

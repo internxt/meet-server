@@ -6,7 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import * as uuid from 'uuid';
 import configuration from '../../config/configuration';
 import { PaymentService, Tier } from '../../externals/payments.service';
-import { CallService } from './call.service';
+import { CallService } from './services/call.service';
 import { mockUserPayload } from './fixtures';
 
 jest.mock('uuid');

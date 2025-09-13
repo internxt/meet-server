@@ -3,9 +3,9 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
-import { RoomUserUseCase } from '../../room/room-user.usecase';
-import { Room } from '../../room/room.domain';
-import { RoomUseCase } from '../../room/room.usecase';
+import { RoomUserUseCase } from '../../room-user.usecase';
+import { Room } from '../../domain/room.domain';
+import { RoomUseCase } from '../../room.usecase';
 import {
   JitsiGenericWebHookEvent,
   JitsiWebhookPayload,

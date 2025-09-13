@@ -6,8 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
-import { RoomUserUseCase } from '../room/room-user.usecase';
+import { UsersInRoomDto } from './dto/users-in-room.dto';
+import { RoomUserUseCase } from './room-user.usecase';
 import { CallController } from './call.controller';
 import { CallUseCase } from './call.usecase';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';

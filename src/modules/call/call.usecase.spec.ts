@@ -7,11 +7,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { RoomUser } from '../room/room-user.domain';
-import { RoomUserUseCase } from '../room/room-user.usecase';
-import { Room } from '../room/room.domain';
-import { RoomUseCase } from '../room/room.usecase';
-import { CallService } from './call.service';
+import { RoomUser } from './domain/room-user.domain';
+import { RoomUserUseCase } from './room-user.usecase';
+import { Room } from './domain/room.domain';
+import { RoomUseCase } from './room.usecase';
+import { CallService } from './services/call.service';
 import { CallUseCase } from './call.usecase';
 import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
 
@@ -129,46 +129,6 @@ describe('CallUseCase', () => {
       ).rejects.toThrow(error);
 
       expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
-    });
-  });
-
-  describe('createRoomForCall', () => {
-    it('when creating room for call, then should create room successfully', async () => {
-      const createRoomSpy = jest
-        .spyOn(roomUseCase, 'createRoom')
-        .mockResolvedValueOnce(createMock<Room>(mockRoomData));
-
-      await callUseCase.createRoomForCall(
-        mockCallResponse,
-        mockUserPayload.uuid,
-        mockUserPayload.email,
-      );
-
-      expect(createRoomSpy).toHaveBeenCalledWith({
-        id: mockCallResponse.room,
-        hostId: mockUserPayload.uuid,
-        maxUsersAllowed: mockCallResponse.paxPerCall,
-      });
-    });
-
-    it('when room creation fails, then should throw ConflictException', async () => {
-      const createRoomSpy = jest
-        .spyOn(roomUseCase, 'createRoom')
-        .mockRejectedValueOnce(new Error('Room already exists'));
-
-      await expect(
-        callUseCase.createRoomForCall(
-          mockCallResponse,
-          mockUserPayload.uuid,
-          mockUserPayload.email,
-        ),
-      ).rejects.toThrow(ConflictException);
-
-      expect(createRoomSpy).toHaveBeenCalledWith({
-        id: mockCallResponse.room,
-        hostId: mockUserPayload.uuid,
-        maxUsersAllowed: mockCallResponse.paxPerCall,
-      });
     });
   });
 

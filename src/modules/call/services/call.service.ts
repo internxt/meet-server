@@ -6,16 +6,16 @@ import {
 } from '@nestjs/common';
 import jwt, { JwtHeader } from 'jsonwebtoken';
 import { v4 } from 'uuid';
-import configuration from '../../config/configuration';
-import { PaymentService, Tier } from '../../externals/payments.service';
+import configuration from '../../../config/configuration';
+import { PaymentService, Tier } from '../../../externals/payments.service';
 import {
   getJitsiJWTHeader,
   getJitsiJWTPayload,
   getJitsiJWTSecret,
-} from '../../lib/jitsi';
-import { UserTokenData } from '../auth/dto/user.dto';
-import { UserDataForToken } from '../user/user.attributes';
-import { User } from '../user/user.domain';
+} from '../../../lib/jitsi';
+import { UserTokenData } from '../../auth/dto/user.dto';
+import { UserDataForToken } from '../../../shared/user/user.attributes';
+import { User } from '../../../shared/user/user.domain';
 
 export function SignWithRS256AndHeader(
   payload: object,
