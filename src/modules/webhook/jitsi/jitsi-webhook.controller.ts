@@ -8,11 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import {
-  JitsiGenericWebHookEvent,
-  JitsiWebhookPayload,
-} from './interfaces/JitsiGenericWebHookPayload';
-import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
+import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiWebhookService } from './jitsi-webhook.service';
 
 @ApiTags('Jitsi Webhook')
@@ -50,7 +46,9 @@ export class JitsiWebhookController {
   ): Promise<{ success: boolean }> {
     this.logger.log(`Received webhook event: ${payload.eventType}`);
 
-    if (!this.jitsiWebhookService.validateWebhookRequest(headers, payload)) {
+    const signature = headers['x-jaas-signature'];
+
+    if (!this.jitsiWebhookService.validateWebhookRequest(signature, payload)) {
       this.logger.warn('Invalid webhook request');
       throw new UnauthorizedException('Invalid webhook request');
     }
@@ -61,20 +59,7 @@ export class JitsiWebhookController {
     }
 
     try {
-      switch (payload.eventType) {
-        case JitsiGenericWebHookEvent.PARTICIPANT_LEFT:
-          await this.jitsiWebhookService.handleParticipantLeft(
-            payload as JitsiParticipantLeftWebHookPayload,
-          );
-          break;
-
-        default:
-          this.logger.log(
-            `Ignoring unhandled event type: ${payload.eventType}`,
-          );
-          break;
-      }
-
+      await this.jitsiWebhookService.handleWebhookEvent(payload);
       return { success: true };
     } catch (error: unknown) {
       if (error instanceof Error) {
