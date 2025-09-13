@@ -3,8 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { RoomUserUseCase } from '../../room/room-user.usecase';
 import { RoomUseCase } from '../../room/room.usecase';
-import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
+import {
+  JitsiGenericWebHookEvent,
+  JitsiWebhookPayload,
+  JitsiParticipantJoinedWebHookPayload,
+} from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
+import { Room } from '../../room/room.domain';
+
 @Injectable()
 export class JitsiWebhookService {
   private readonly logger = new Logger(JitsiWebhookService.name);
@@ -24,6 +30,28 @@ export class JitsiWebhookService {
   }
 
   /**
+   * Handles webhook events by routing to the appropriate handler
+   * @param payload The webhook payload
+   */
+  async handleWebhookEvent(payload: JitsiWebhookPayload): Promise<void> {
+    switch (payload.eventType) {
+      case JitsiGenericWebHookEvent.PARTICIPANT_LEFT:
+        await this.handleParticipantLeft(
+          payload as JitsiParticipantLeftWebHookPayload,
+        );
+        break;
+      case JitsiGenericWebHookEvent.PARTICIPANT_JOINED:
+        await this.handleParticipantJoined(
+          payload as JitsiParticipantJoinedWebHookPayload,
+        );
+        break;
+      default:
+        this.logger.log(`Ignoring unhandled event type: ${payload.eventType}`);
+        break;
+    }
+  }
+
+  /**
    * Handles the PARTICIPANT_LEFT event from Jitsi
    * @param payload The webhook payload
    * @returns A promise that resolves when the event is handled
@@ -38,44 +66,92 @@ export class JitsiWebhookService {
       return;
     }
 
-    try {
-      this.logger.log(
-        `Handling PARTICIPANT_LEFT event for participant: ${payload.data.id}`,
-      );
+    this.logger.log(
+      `Handling PARTICIPANT_LEFT event for participant: ${payload.data.id}`,
+    );
 
-      const roomId = this.extractRoomId(payload.fqn);
-
-      if (!roomId) {
-        this.logger.warn(`Could not extract room ID from FQN: ${payload.fqn}`);
-        return;
-      }
-
-      const participantId = payload.data.id;
-
-      if (!participantId) {
-        this.logger.warn('Participant ID not found in payload');
-        return;
-      }
-
-      const room = await this.roomUseCase.getRoomByRoomId(roomId);
-
-      if (!room) {
-        this.logger.warn(`Room with ID ${roomId} not found`);
-        return;
-      }
-
-      const isOwner = participantId === room.hostId;
-      if (isOwner) await this.roomUseCase.closeRoom(roomId);
-
-      await this.roomUserUseCase.removeUserFromRoom(participantId, room);
-
-      this.logger.log(
-        `Successfully processed PARTICIPANT_LEFT event for participant ${participantId} in room ${roomId}`,
-      );
-    } catch (error) {
-      this.logger.error('Error handling PARTICIPANT_LEFT event', error);
-      throw error;
+    const roomData = await this.validateRoomContext(payload);
+    if (!roomData) {
+      return;
     }
+
+    const { roomId, room, participantId } = roomData;
+    const isOwner = participantId === room.hostId;
+
+    if (isOwner) {
+      await this.roomUseCase.closeRoom(roomId);
+    }
+
+    await this.roomUserUseCase.removeUserFromRoom(participantId, room);
+
+    this.logger.log(
+      { participantId, roomId },
+      `Successfully processed PARTICIPANT_LEFT event`,
+    );
+  }
+
+  /**
+   * Handles the PARTICIPANT_JOINED event from Jitsi
+   * @param payload The webhook payload
+   */
+  async handleParticipantJoined(
+    payload: JitsiParticipantJoinedWebHookPayload,
+  ): Promise<void> {
+    const participantId = payload.data.id || payload.data.participantId;
+    this.logger.log(
+      `Handling PARTICIPANT_JOINED event for participant: ${participantId}`,
+    );
+
+    const roomData = await this.validateRoomContext(payload);
+    if (!roomData) {
+      return;
+    }
+
+    const { roomId, participantId: validatedParticipantId } = roomData;
+
+    await this.roomUserUseCase.addUserToRoom(roomId, {
+      userId: validatedParticipantId,
+      name: payload.data.name,
+    });
+
+    this.logger.log(
+      { participantId: validatedParticipantId, roomId },
+      `Successfully processed PARTICIPANT_JOINED event`,
+    );
+  }
+
+  /**
+   * Validates room context from webhook payload
+   * @param payload The webhook payload
+   * @returns Object with roomId, room, and participantId or null if validation fails
+   */
+  private async validateRoomContext(payload: {
+    fqn: string;
+    data: { id?: string; participantId?: string };
+  }): Promise<{
+    roomId: string;
+    room: Room;
+    participantId: string;
+  } | null> {
+    const roomId = this.extractRoomId(payload.fqn);
+    if (!roomId) {
+      this.logger.warn({ payload }, 'Could not extract room ID from payload');
+      return null;
+    }
+
+    const participantId = payload.data.id || payload.data.participantId;
+    if (!participantId) {
+      this.logger.warn('Participant ID not found in payload');
+      return null;
+    }
+
+    const room = await this.roomUseCase.getRoomByRoomId(roomId);
+    if (!room) {
+      this.logger.warn({ roomId }, 'Room not found');
+      return null;
+    }
+
+    return { roomId, room, participantId };
   }
 
   /**
@@ -103,7 +179,7 @@ export class JitsiWebhookService {
    * @returns True if the request is valid
    */
   validateWebhookRequest(
-    headers: Record<string, string>,
+    signature: string,
     payload: JitsiWebhookPayload,
   ): boolean {
     if (!this.webhookSecret) {
@@ -111,7 +187,6 @@ export class JitsiWebhookService {
       return true;
     }
 
-    const signature = headers['x-jaas-signature'];
     if (!signature) {
       this.logger.warn('No Jitsi signature found in headers');
       return false;
@@ -153,7 +228,7 @@ export class JitsiWebhookService {
         Buffer.from(expectedSignature, 'base64'),
       );
     } catch (error) {
-      this.logger.error('Error validating webhook signature', error);
+      this.logger.error(error, 'Error validating webhook signature');
       return false;
     }
   }
