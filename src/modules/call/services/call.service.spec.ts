@@ -1,56 +1,54 @@
-import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { createMock } from '@golevelup/ts-jest';
 import { UnauthorizedException } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import * as jwt from 'jsonwebtoken';
 import * as uuid from 'uuid';
-import configuration from '../../config/configuration';
-import { PaymentService, Tier } from '../../externals/payments.service';
-import { CallService } from './services/call.service';
-import { mockUserPayload } from './fixtures';
+import { PaymentService, Tier } from '../../../externals/payments.service';
+import { CallService } from './call.service';
+import { mockUserPayload } from '../fixtures';
 
 jest.mock('uuid');
 jest.mock('jsonwebtoken');
+jest.mock('../../../lib/jitsi', () => ({
+  getJitsiJWTSecret: jest.fn(() => 'mock-secret'),
+  getJitsiJWTHeader: jest.fn(() => ({ alg: 'RS256', typ: 'JWT' })),
+  getJitsiJWTPayload: jest.fn(() => ({ iss: 'jitsi', aud: 'jitsi' })),
+}));
+
+jest.mock('../../../config/configuration', () => {
+  return jest.fn(() => ({
+    jitsi: {
+      appId: 'jitsi-app-id',
+    },
+  }));
+});
 
 describe('Call service', () => {
   let callService: CallService;
-  let paymentService: DeepMocked<PaymentService>;
+  let paymentService: PaymentService;
+  let moduleRef: TestingModule;
 
   beforeEach(async () => {
-    paymentService = createMock<PaymentService>();
+    moduleRef = await Test.createTestingModule({
+      providers: [CallService],
+    })
+      .useMocker(createMock)
+      .compile();
 
-    const module = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          envFilePath: [`.env.${process.env.NODE_ENV}`],
-          load: [configuration],
-          isGlobal: true,
-        }),
-      ],
-      providers: [
-        {
-          provide: PaymentService,
-          useValue: paymentService,
-        },
-        CallService,
-      ],
-    }).compile();
-
-    callService = module.get<CallService>(CallService);
+    callService = moduleRef.get<CallService>(CallService);
+    paymentService = moduleRef.get<PaymentService>(PaymentService);
   });
 
   it('When the user has meet enabled, then a call token should be created', async () => {
     const userPayload = mockUserPayload;
-    const getUserTierSpy = jest
-      .spyOn(paymentService, 'getUserTier')
-      .mockResolvedValue({
-        featuresPerService: {
-          meet: {
-            enabled: true,
-            paxPerCall: 10,
-          },
+    jest.spyOn(paymentService, 'getUserTier').mockResolvedValue({
+      featuresPerService: {
+        meet: {
+          enabled: true,
+          paxPerCall: 10,
         },
-      } as Tier);
+      },
+    } as Tier);
 
     (uuid.v4 as jest.Mock).mockReturnValue('test-room-id');
     (jwt.sign as jest.Mock).mockReturnValue('test-jitsi-token');
@@ -64,27 +62,25 @@ describe('Call service', () => {
       paxPerCall: 10,
     });
 
-    expect(getUserTierSpy).toHaveBeenCalledWith(userPayload.uuid);
+    expect(paymentService.getUserTier).toHaveBeenCalledWith(userPayload.uuid);
   });
 
   it('When the user does not have meet enabled, then an error indicating so is thrown', async () => {
     const userPayload = mockUserPayload;
-    const getUserTierSpy = jest
-      .spyOn(paymentService, 'getUserTier')
-      .mockResolvedValue({
-        featuresPerService: {
-          meet: {
-            enabled: false,
-            paxPerCall: 0,
-          },
+    jest.spyOn(paymentService, 'getUserTier').mockResolvedValue({
+      featuresPerService: {
+        meet: {
+          enabled: false,
+          paxPerCall: 0,
         },
-      } as Tier);
+      },
+    } as Tier);
 
     await expect(callService.createCallToken(userPayload)).rejects.toThrow(
       UnauthorizedException,
     );
 
-    expect(getUserTierSpy).toHaveBeenCalledWith(userPayload.uuid);
+    expect(paymentService.getUserTier).toHaveBeenCalledWith(userPayload.uuid);
   });
 
   describe('createCallTokenForParticipant', () => {

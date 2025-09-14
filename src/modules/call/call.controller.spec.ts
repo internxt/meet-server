@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersInRoomDto } from './dto/users-in-room.dto';
-import { RoomUserUseCase } from './room-user.usecase';
+import { RoomService } from './services/room.service';
 import { CallController } from './call.controller';
 import { CallUseCase } from './call.usecase';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
@@ -17,7 +17,7 @@ import { createMockUserToken, mockUserPayload } from './fixtures';
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
   let callUseCase: DeepMocked<CallUseCase>;
-  let roomUserUseCase: DeepMocked<RoomUserUseCase>;
+  let roomService: DeepMocked<RoomService>;
 
   const mockRoomId = 'test-room-id';
   const mockJoinCallDto: JoinCallDto = {
@@ -51,21 +51,13 @@ describe('Testing Call Endpoints', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CallController],
-      providers: [
-        {
-          provide: CallUseCase,
-          useValue: createMock<CallUseCase>(),
-        },
-        {
-          provide: RoomUserUseCase,
-          useValue: createMock<RoomUserUseCase>(),
-        },
-      ],
-    }).compile();
+    })
+      .useMocker(createMock)
+      .compile();
 
     callController = module.get<CallController>(CallController);
     callUseCase = module.get<DeepMocked<CallUseCase>>(CallUseCase);
-    roomUserUseCase = module.get<DeepMocked<RoomUserUseCase>>(RoomUserUseCase);
+    roomService = module.get<DeepMocked<RoomService>>(RoomService);
   });
 
   describe('Creating a call', () => {
@@ -88,15 +80,10 @@ describe('Testing Call Endpoints', () => {
         appId: 'jitsi-app-id',
       };
 
-      callUseCase.validateUserHasNoActiveRoom.mockResolvedValueOnce(undefined);
       callUseCase.createCallAndRoom.mockResolvedValueOnce(mockResponse);
 
       const result = await callController.createCall(mockUserToken.payload);
 
-      expect(callUseCase.validateUserHasNoActiveRoom).toHaveBeenCalledWith(
-        mockUserToken.payload.uuid,
-        mockUserToken.payload.email,
-      );
       expect(callUseCase.createCallAndRoom).toHaveBeenCalledWith(
         mockUserToken.payload,
       );
@@ -106,7 +93,7 @@ describe('Testing Call Endpoints', () => {
     it('When the room already exists, then an error indicating so is thrown', async () => {
       const mockUserToken = createMockUserToken();
 
-      callUseCase.validateUserHasNoActiveRoom.mockRejectedValueOnce(
+      callUseCase.createCallAndRoom.mockRejectedValueOnce(
         new ConflictException('User already has an active room as host'),
       );
 
@@ -118,7 +105,7 @@ describe('Testing Call Endpoints', () => {
     it('When an unexpected error occurs, then an error indicating so is thrown', async () => {
       const mockUserToken = createMockUserToken();
 
-      callUseCase.validateUserHasNoActiveRoom.mockRejectedValueOnce(
+      callUseCase.createCallAndRoom.mockRejectedValueOnce(
         new Error('Unexpected error'),
       );
 
@@ -198,7 +185,11 @@ describe('Testing Call Endpoints', () => {
       );
 
       await expect(
-        callController.joinCall(mockRoomId, mockUserToken.payload),
+        callController.joinCall(
+          mockRoomId,
+          mockUserToken.payload,
+          mockJoinCallDto,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -210,7 +201,11 @@ describe('Testing Call Endpoints', () => {
       );
 
       await expect(
-        callController.joinCall(mockRoomId, mockUserToken.payload),
+        callController.joinCall(
+          mockRoomId,
+          mockUserToken.payload,
+          mockJoinCallDto,
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -222,7 +217,11 @@ describe('Testing Call Endpoints', () => {
       );
 
       await expect(
-        callController.joinCall(mockRoomId, mockUserToken.payload),
+        callController.joinCall(
+          mockRoomId,
+          mockUserToken.payload,
+          mockJoinCallDto,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -232,7 +231,11 @@ describe('Testing Call Endpoints', () => {
       callUseCase.joinCall.mockRejectedValueOnce(new Error('Unexpected error'));
 
       await expect(
-        callController.joinCall(mockRoomId, mockUserToken.payload),
+        callController.joinCall(
+          mockRoomId,
+          mockUserToken.payload,
+          mockJoinCallDto,
+        ),
       ).rejects.toThrow(Error);
     });
 
@@ -265,51 +268,51 @@ describe('Testing Call Endpoints', () => {
 
   describe('Getting users in a call', () => {
     it('should get users in a call for authenticated user', async () => {
-      roomUserUseCase.getUsersInRoom.mockResolvedValue(mockUsersInRoom);
+      roomService.getUsersInRoom.mockResolvedValue(mockUsersInRoom);
 
       const result = await callController.getUsersInCall(mockRoomId);
 
       expect(result).toEqual(mockUsersInRoom);
-      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
+      expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
     });
 
     it('should get users in a call for anonymous user', async () => {
-      roomUserUseCase.getUsersInRoom.mockResolvedValue(mockUsersInRoom);
+      roomService.getUsersInRoom.mockResolvedValue(mockUsersInRoom);
 
       const result = await callController.getUsersInCall(mockRoomId);
 
       expect(result).toEqual(mockUsersInRoom);
-      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
+      expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
     });
 
     it('When the room is not found, it should propagate NotFoundException', async () => {
-      roomUserUseCase.getUsersInRoom.mockRejectedValueOnce(
+      roomService.getUsersInRoom.mockRejectedValue(
         new NotFoundException('Specified room not found'),
       );
 
       await expect(callController.getUsersInCall(mockRoomId)).rejects.toThrow(
         NotFoundException,
       );
-      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
+      expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
     });
 
     it('When an unexpected error occurs, it should propagate the error', async () => {
-      roomUserUseCase.getUsersInRoom.mockRejectedValueOnce(
+      roomService.getUsersInRoom.mockRejectedValue(
         new Error('Unexpected error'),
       );
 
       await expect(callController.getUsersInCall(mockRoomId)).rejects.toThrow(
         Error,
       );
-      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
+      expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
     });
 
     it('When no users are in the room, it should return an empty array', async () => {
-      roomUserUseCase.getUsersInRoom.mockResolvedValueOnce([]);
+      roomService.getUsersInRoom.mockResolvedValue([]);
 
       const result = await callController.getUsersInCall(mockRoomId);
 
-      expect(roomUserUseCase.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
+      expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
       expect(result).toEqual([]);
       expect(result.length).toBe(0);
     });
@@ -336,7 +339,7 @@ describe('Testing Call Endpoints', () => {
       const leaveCallDto = new LeaveCallDto();
       leaveCallDto.userId = anonymousUserId;
 
-      callUseCase.leaveCall.mockResolvedValueOnce();
+      callUseCase.leaveCall.mockResolvedValue();
 
       await callController.leaveCall(mockRoomId, null, leaveCallDto);
 
@@ -350,7 +353,7 @@ describe('Testing Call Endpoints', () => {
       const leaveCallDto = new LeaveCallDto();
       leaveCallDto.userId = 'anonymous-user-id';
 
-      callUseCase.leaveCall.mockResolvedValueOnce();
+      callUseCase.leaveCall.mockResolvedValue();
 
       const userToken = createMockUserToken();
       await callController.leaveCall(
@@ -367,7 +370,7 @@ describe('Testing Call Endpoints', () => {
 
     it('should pass undefined when neither authenticated user nor DTO with userId are provided', async () => {
       const emptyDto = new LeaveCallDto();
-      callUseCase.leaveCall.mockResolvedValueOnce();
+      callUseCase.leaveCall.mockResolvedValue();
 
       await callController.leaveCall(mockRoomId, null, emptyDto);
 
@@ -377,7 +380,7 @@ describe('Testing Call Endpoints', () => {
     it('should propagate NotFoundException when room is not found', async () => {
       const userToken = createMockUserToken();
 
-      callUseCase.leaveCall.mockRejectedValueOnce(
+      callUseCase.leaveCall.mockRejectedValue(
         new NotFoundException('Specified room not found'),
       );
 
@@ -387,7 +390,7 @@ describe('Testing Call Endpoints', () => {
     });
 
     it('should propagate BadRequestException when no userId is provided', async () => {
-      callUseCase.leaveCall.mockRejectedValueOnce(
+      callUseCase.leaveCall.mockRejectedValue(
         new BadRequestException('User ID is required'),
       );
 

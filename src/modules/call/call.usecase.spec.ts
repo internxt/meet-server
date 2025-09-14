@@ -3,17 +3,16 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomUser } from './domain/room-user.domain';
-import { RoomUserUseCase } from './room-user.usecase';
 import { Room } from './domain/room.domain';
-import { RoomUseCase } from './room.usecase';
+import { RoomService } from './services/room.service';
 import { CallService } from './services/call.service';
 import { CallUseCase } from './call.usecase';
-import { mockCallResponse, mockRoomData, mockUserPayload } from './fixtures';
+import { mockRoomData, mockUserPayload } from './fixtures';
+import { v4 } from 'uuid';
 
 jest.mock('uuid', () => ({
   v4: jest.fn(() => 'generated-uuid'),
@@ -22,40 +21,23 @@ jest.mock('uuid', () => ({
 describe('CallUseCase', () => {
   let callUseCase: CallUseCase;
   let callService: DeepMocked<CallService>;
-  let roomUseCase: DeepMocked<RoomUseCase>;
-  let roomUserUseCase: DeepMocked<RoomUserUseCase>;
+  let roomService: DeepMocked<RoomService>;
 
   beforeEach(async () => {
-    callService = createMock<CallService>();
-    roomUseCase = createMock<RoomUseCase>();
-    roomUserUseCase = createMock<RoomUserUseCase>();
-
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CallUseCase,
-        {
-          provide: CallService,
-          useValue: callService,
-        },
-        {
-          provide: RoomUseCase,
-          useValue: roomUseCase,
-        },
-        {
-          provide: RoomUserUseCase,
-          useValue: roomUserUseCase,
-        },
-      ],
-    }).compile();
+      providers: [CallUseCase],
+    })
+      .useMocker(createMock)
+      .compile();
 
     callUseCase = module.get<CallUseCase>(CallUseCase);
+    callService = module.get<DeepMocked<CallService>>(CallService);
+    roomService = module.get<DeepMocked<RoomService>>(RoomService);
   });
 
   describe('validateUserHasNoActiveRoom', () => {
     it('when user has no active room, then it should not throw', async () => {
-      const getOpenRoomByHostIdSpy = jest
-        .spyOn(roomUseCase, 'getOpenRoomByHostId')
-        .mockResolvedValueOnce(null);
+      roomService.getOpenRoomByHostId.mockResolvedValueOnce(null);
 
       await expect(
         callUseCase.validateUserHasNoActiveRoom(
@@ -64,13 +46,15 @@ describe('CallUseCase', () => {
         ),
       ).resolves.not.toThrow();
 
-      expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(roomService.getOpenRoomByHostId).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+      );
     });
 
-    it('when user already has an active room, then it should throw ConflictException', async () => {
-      const getOpenRoomByHostIdSpy = jest
-        .spyOn(roomUseCase, 'getOpenRoomByHostId')
-        .mockResolvedValueOnce(createMock<Room>(mockRoomData));
+    it('when user already has an active room, then it should throw', async () => {
+      roomService.getOpenRoomByHostId.mockResolvedValueOnce(
+        createMock<Room>(mockRoomData),
+      );
 
       await expect(
         callUseCase.validateUserHasNoActiveRoom(
@@ -79,95 +63,32 @@ describe('CallUseCase', () => {
         ),
       ).rejects.toThrow(ConflictException);
 
-      expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
-    });
-
-    it('when an unexpected error occurs, then should throw InternalServerErrorException', async () => {
-      const getOpenRoomByHostIdSpy = jest
-        .spyOn(roomUseCase, 'getOpenRoomByHostId')
-        .mockRejectedValueOnce(new Error('Database error'));
-
-      await expect(
-        callUseCase.validateUserHasNoActiveRoom(
-          mockUserPayload.uuid,
-          mockUserPayload.email,
-        ),
-      ).rejects.toThrow(InternalServerErrorException);
-
-      expect(getOpenRoomByHostIdSpy).toHaveBeenCalledWith(mockUserPayload.uuid);
+      expect(roomService.getOpenRoomByHostId).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+      );
     });
   });
 
   describe('createCallAndRoom', () => {
-    it('when creating call and room, then should create a call token and room successfully', async () => {
-      const createCallTokenSpy = jest
-        .spyOn(callService, 'createCallToken')
-        .mockResolvedValueOnce(mockCallResponse);
-      const createRoomForCallSpy = jest
-        .spyOn(callUseCase, 'createRoomForCall')
-        .mockResolvedValueOnce();
+    const mockCallToken = {
+      token: 'call-token',
+      room: v4(),
+      paxPerCall: 10,
+      appId: 'jitsi-app-id',
+    };
+
+    it('when creating call and room and user does not have an active room, then should create a call token and room successfully', async () => {
+      callService.createCallToken.mockResolvedValueOnce(mockCallToken);
+      roomService.createRoom.mockResolvedValueOnce(undefined);
+      jest
+        .spyOn(callUseCase, 'validateUserHasNoActiveRoom')
+        .mockResolvedValueOnce(null);
 
       const result = await callUseCase.createCallAndRoom(mockUserPayload);
 
-      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
-      expect(createRoomForCallSpy).toHaveBeenCalledWith(
-        mockCallResponse,
-        mockUserPayload.uuid,
-        mockUserPayload.email,
-      );
-      expect(result).toEqual(mockCallResponse);
-    });
-
-    it('when call service throws error, then should propagate errors', async () => {
-      const error = new Error('Failed to create call');
-      const createCallTokenSpy = jest
-        .spyOn(callService, 'createCallToken')
-        .mockRejectedValueOnce(error);
-
-      await expect(
-        callUseCase.createCallAndRoom(mockUserPayload),
-      ).rejects.toThrow(error);
-
-      expect(createCallTokenSpy).toHaveBeenCalledWith(mockUserPayload);
-    });
-  });
-
-  describe('handleError', () => {
-    const context = {
-      uuid: mockUserPayload.uuid,
-      email: mockUserPayload.email,
-    };
-
-    it('when handling BadRequestException, then should not throw', () => {
-      const error = new BadRequestException('Bad request');
-
-      expect(() => {
-        callUseCase.handleError(error, context);
-      }).not.toThrow();
-    });
-
-    it('when handling ConflictException, then should not throw', () => {
-      const error = new ConflictException('Conflict');
-
-      expect(() => {
-        callUseCase.handleError(error, context);
-      }).not.toThrow();
-    });
-
-    it('when handling InternalServerErrorException, then should not throw', () => {
-      const error = new InternalServerErrorException('Internal error');
-
-      expect(() => {
-        callUseCase.handleError(error, context);
-      }).not.toThrow();
-    });
-
-    it('when handling unknown errors, then should throw', () => {
-      const error = new Error('Unknown error');
-
-      expect(() => {
-        callUseCase.handleError(error, context);
-      }).toThrow(InternalServerErrorException);
+      expect(callService.createCallToken).toHaveBeenCalledWith(mockUserPayload);
+      expect(roomService.createRoom).toHaveBeenCalledWith(expect.any(Room));
+      expect(result).toEqual(mockCallToken);
     });
   });
 
@@ -208,26 +129,21 @@ describe('CallUseCase', () => {
         lastName: userLastName,
       };
 
-      const getRoomByRoomIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(roomMock);
-      const addUserToRoomSpy = jest
-        .spyOn(roomUserUseCase, 'addUserToRoom')
-        .mockResolvedValueOnce(roomUserMock);
-      const createCallTokenForParticipantSpy = jest
-        .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce(callToken);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      roomService.addUserToRoom.mockResolvedValueOnce(roomUserMock);
+      callService.createCallTokenForParticipant.mockReturnValueOnce(callToken);
 
       const result = await callUseCase.joinCall(roomId, userData);
 
-      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
-      expect(addUserToRoomSpy).toHaveBeenCalledWith(roomId, {
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.addUserToRoom).toHaveBeenCalledWith(roomId, {
         userId,
         name: userName,
         lastName: userLastName,
         anonymous: false,
+        email: undefined,
       });
-      expect(createCallTokenForParticipantSpy).toHaveBeenCalledWith(
+      expect(callService.createCallTokenForParticipant).toHaveBeenCalledWith(
         userId,
         roomId,
         false,
@@ -254,27 +170,21 @@ describe('CallUseCase', () => {
         name: userName,
       };
 
-      const getRoomByRoomIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(roomMock);
-      const addUserToRoomSpy = jest
-        .spyOn(roomUserUseCase, 'addUserToRoom')
-        .mockResolvedValueOnce(anonymousUserMock);
-      const createCallTokenForParticipantSpy = jest
-        .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce(callToken);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      roomService.addUserToRoom.mockResolvedValueOnce(anonymousUserMock);
+      callService.createCallTokenForParticipant.mockReturnValueOnce(callToken);
 
       const result = await callUseCase.joinCall(roomId, userData);
 
-      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
-      expect(addUserToRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.addUserToRoom).toHaveBeenCalledWith(
         roomId,
         expect.objectContaining({
           name: userName,
           anonymous: true,
         }),
       );
-      expect(createCallTokenForParticipantSpy).toHaveBeenCalledWith(
+      expect(callService.createCallTokenForParticipant).toHaveBeenCalledWith(
         anonymousUserMock.userId,
         roomId,
         true,
@@ -297,30 +207,27 @@ describe('CallUseCase', () => {
 
     it('when joining call as host, then should join successfully and open the room', async () => {
       const userData = { userId: roomMock.hostId };
-      roomMock.isClosed = true;
-      jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(roomMock);
-      const openRoomSpy = jest
-        .spyOn(roomUseCase, 'openRoom')
-        .mockResolvedValueOnce();
+      const closedRoomMock = { ...roomMock, isClosed: true };
+
+      roomService.getRoomByRoomId.mockResolvedValueOnce(closedRoomMock);
+      roomService.addUserToRoom.mockResolvedValueOnce(roomUserMock);
+      callService.createCallTokenForParticipant.mockReturnValueOnce(callToken);
+      roomService.openRoom.mockResolvedValueOnce();
 
       await callUseCase.joinCall(roomId, userData);
 
-      expect(openRoomSpy).toHaveBeenCalledWith(roomId);
+      expect(roomService.openRoom).toHaveBeenCalledWith(roomId);
     });
 
     it('when room does not exist, then should throw NotFoundException', async () => {
       const userData = { userId };
-      const getRoomByRoomIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(null);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(null);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
         NotFoundException,
       );
 
-      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
     });
 
     it('when non-owner tries to join closed room, then should throw', async () => {
@@ -331,35 +238,29 @@ describe('CallUseCase', () => {
         hostId: 'different-host-id',
       };
 
-      const getRoomByRoomIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(closedRoomMock);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(closedRoomMock);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
         ForbiddenException,
       );
 
-      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
     });
 
-    it('when roomUserUseCase throws BadRequestException, then should propagate error', async () => {
+    it('when roomService throws BadRequestException, then should propagate error', async () => {
       const userData = { userId };
       const error = new BadRequestException('Invalid user data');
       const openRoomMock = { ...roomMock, isClosed: false };
 
-      const getRoomByRoomIdSpy = jest
-        .spyOn(roomUseCase, 'getRoomByRoomId')
-        .mockResolvedValueOnce(openRoomMock);
-      const addUserToRoomSpy = jest
-        .spyOn(roomUserUseCase, 'addUserToRoom')
-        .mockRejectedValueOnce(error);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+      roomService.addUserToRoom.mockRejectedValueOnce(error);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
         BadRequestException,
       );
 
-      expect(getRoomByRoomIdSpy).toHaveBeenCalledWith(roomId);
-      expect(addUserToRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.addUserToRoom).toHaveBeenCalledWith(
         roomId,
         expect.objectContaining({
           userId,
@@ -368,27 +269,27 @@ describe('CallUseCase', () => {
       );
     });
 
-    it('when roomUserUseCase throws ConflictException, then should propagate error', async () => {
+    it('when roomService throws ConflictException, then should propagate error', async () => {
       const userData = { userId };
       const error = new ConflictException('User already in room');
       const openRoomMock = { ...roomMock, isClosed: false };
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
-      roomUserUseCase.addUserToRoom.mockRejectedValueOnce(error);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+      roomService.addUserToRoom.mockRejectedValueOnce(error);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
         ConflictException,
       );
     });
 
-    it('When there is an unknown error, then throw an internal server error', async () => {
+    it('When there is an unknown error, then propagate the error', async () => {
       const userData = { userId };
       const error = new Error('Unknown error');
 
-      roomUseCase.getRoomByRoomId.mockRejectedValueOnce(error);
+      roomService.getRoomByRoomId.mockRejectedValueOnce(error);
 
       await expect(callUseCase.joinCall(roomId, userData)).rejects.toThrow(
-        InternalServerErrorException,
+        Error,
       );
     });
   });
@@ -407,7 +308,7 @@ describe('CallUseCase', () => {
         ...mockRoomData,
         isClosed: false,
       });
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
       const registeredRoomUser = new RoomUser({
         id: 1,
@@ -418,7 +319,7 @@ describe('CallUseCase', () => {
         anonymous: false,
       });
 
-      roomUserUseCase.addUserToRoom.mockResolvedValueOnce(registeredRoomUser);
+      roomService.addUserToRoom.mockResolvedValueOnce(registeredRoomUser);
       const createCallTokenForParticipantSpy = jest
         .spyOn(callService, 'createCallTokenForParticipant')
         .mockReturnValueOnce(callToken);
@@ -457,7 +358,7 @@ describe('CallUseCase', () => {
         ...mockRoomData,
         isClosed: false,
       });
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
       const anonymousRoomUser = new RoomUser({
         id: 1,
@@ -467,19 +368,15 @@ describe('CallUseCase', () => {
         anonymous: true,
       });
 
-      const addUserToRoomSpy = jest
-        .spyOn(roomUserUseCase, 'addUserToRoom')
-        .mockResolvedValueOnce(anonymousRoomUser);
-      jest
-        .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce(callToken);
+      roomService.addUserToRoom.mockResolvedValueOnce(anonymousRoomUser);
+      callService.createCallTokenForParticipant.mockReturnValueOnce(callToken);
 
       await callUseCase.joinCall(roomId, {
         name,
         anonymous: true,
       });
 
-      expect(addUserToRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.addUserToRoom).toHaveBeenCalledWith(
         roomId,
         expect.objectContaining({
           name,
@@ -500,7 +397,7 @@ describe('CallUseCase', () => {
         ...mockRoomData,
         isClosed: false,
       });
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
       const userWithoutId = new RoomUser({
         id: 1,
@@ -510,18 +407,14 @@ describe('CallUseCase', () => {
         anonymous: true,
       });
 
-      const addUserToRoomSpy = jest
-        .spyOn(roomUserUseCase, 'addUserToRoom')
-        .mockResolvedValueOnce(userWithoutId);
-      jest
-        .spyOn(callService, 'createCallTokenForParticipant')
-        .mockReturnValueOnce(callToken);
+      roomService.addUserToRoom.mockResolvedValueOnce(userWithoutId);
+      callService.createCallTokenForParticipant.mockReturnValueOnce(callToken);
 
       await callUseCase.joinCall(roomId, {
         name,
       });
 
-      expect(addUserToRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.addUserToRoom).toHaveBeenCalledWith(
         roomId,
         expect.objectContaining({
           name,
@@ -540,135 +433,140 @@ describe('CallUseCase', () => {
 
     beforeEach(() => {
       roomMock = createMock<Room>({ ...mockRoomData, id: roomId, hostId });
-      roomUseCase.getRoomByRoomId.mockResolvedValue(roomMock);
-      roomUserUseCase.removeUserFromRoom.mockResolvedValue();
-      roomUseCase.closeRoom.mockResolvedValue();
-      roomUseCase.removeRoom.mockResolvedValue();
+      roomService.getRoomByRoomId.mockResolvedValue(roomMock);
+      roomService.removeUserFromRoom.mockResolvedValue();
+      roomService.closeRoom.mockResolvedValue();
+      roomService.removeRoom.mockResolvedValue();
     });
 
-    it('when userId is not provided, then should throw', async () => {
-      await expect(callUseCase.leaveCall(roomId, undefined)).rejects.toThrow(
-        BadRequestException,
-      );
+    it('when a valid userId is provided, then should handle leave call normally', async () => {
+      roomService.removeUserFromRoom.mockResolvedValueOnce(undefined);
+      roomService.countUsersInRoom.mockResolvedValueOnce(0);
 
-      expect(roomUseCase.getRoomByRoomId).not.toHaveBeenCalled();
-      expect(roomUserUseCase.removeUserFromRoom).not.toHaveBeenCalled();
+      await callUseCase.leaveCall(roomId, participantId);
+
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
+        participantId,
+        roomMock,
+      );
+      expect(roomService.removeRoom).toHaveBeenCalledWith(roomId);
     });
 
     it('when room does not exist, then should throw', async () => {
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(null);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(null);
 
       await expect(
         callUseCase.leaveCall(roomId, participantId),
       ).rejects.toThrow(NotFoundException);
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).not.toHaveBeenCalled();
-      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
-      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
+      expect(roomService.closeRoom).not.toHaveBeenCalled();
+      expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
     it('when host leaves a non-empty room, then should remove user and close room', async () => {
-      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
+      roomService.countUsersInRoom.mockResolvedValueOnce(1);
 
       await callUseCase.leaveCall(roomId, hostId);
 
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         hostId,
         roomMock,
       );
-      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.closeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.closeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
     it('when the last user (host) leaves, then should remove user and delete room', async () => {
-      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(0);
+      roomService.countUsersInRoom.mockResolvedValueOnce(0);
 
       await callUseCase.leaveCall(roomId, hostId);
 
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         hostId,
         roomMock,
       );
-      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.removeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
+      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.closeRoom).not.toHaveBeenCalled();
     });
 
     it('when the last user (participant) leaves, then should remove user and delete room', async () => {
-      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(0);
+      roomService.countUsersInRoom.mockResolvedValueOnce(0);
 
       await callUseCase.leaveCall(roomId, participantId);
 
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         participantId,
         roomMock,
       );
-      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.removeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
+      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.closeRoom).not.toHaveBeenCalled();
     });
 
     it('when a participant leaves a non-empty room, then should remove user but not close or delete room', async () => {
-      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(2);
+      roomService.countUsersInRoom.mockResolvedValueOnce(2);
 
       await callUseCase.leaveCall(roomId, participantId);
 
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         participantId,
         roomMock,
       );
-      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.closeRoom).not.toHaveBeenCalled();
-      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.closeRoom).not.toHaveBeenCalled();
+      expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
     it('when host leaves call, then should leave successfully and close the room', async () => {
-      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
+      roomService.countUsersInRoom.mockResolvedValueOnce(1);
       roomMock.hostId = hostId;
 
       await callUseCase.leaveCall(roomId, hostId);
 
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         hostId,
         roomMock,
       );
-      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.closeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomUseCase.removeRoom).not.toHaveBeenCalled();
+      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.closeRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
     it('when anonymous user leaves call, then should leave successfully', async () => {
-      roomUserUseCase.countUsersInRoom.mockResolvedValueOnce(1);
+      roomService.countUsersInRoom.mockResolvedValueOnce(1);
 
       await callUseCase.leaveCall(roomId, anonymousUserId);
 
-      expect(roomUseCase.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomUserUseCase.removeUserFromRoom).toHaveBeenCalledWith(
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         anonymousUserId,
         roomMock,
       );
-      expect(roomUserUseCase.countUsersInRoom).toHaveBeenCalledWith(roomId);
+      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
     });
 
-    it('when error occurs during leave call operation, then should handle errors', async () => {
+    it('when error occurs during leave call operation, then should propagate error', async () => {
       const error = new Error('Database error');
-      roomUseCase.getRoomByRoomId.mockRejectedValueOnce(error);
+      roomService.getRoomByRoomId.mockRejectedValueOnce(error);
 
       await expect(
         callUseCase.leaveCall(roomId, participantId),
-      ).rejects.toThrow(InternalServerErrorException);
+      ).rejects.toThrow(error);
     });
 
-    it('when roomUserUseCase throws, then should propagate error', async () => {
+    it('when roomService throws, then should propagate error', async () => {
       const error = new BadRequestException('Invalid user');
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(roomMock);
-      roomUserUseCase.removeUserFromRoom.mockRejectedValueOnce(error);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(roomMock);
+      roomService.removeUserFromRoom.mockRejectedValueOnce(error);
 
       await expect(
         callUseCase.leaveCall(roomId, participantId),

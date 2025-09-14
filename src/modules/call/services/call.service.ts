@@ -74,20 +74,20 @@ export class CallService {
         'User does not have permission to create a call',
       );
 
-    const newRoom = v4();
+    const newRoomId = v4();
     const token = generateJitsiJWT(
       {
         id: user.uuid,
         email: user.email,
         name: `${user.name} ${user.lastname}`,
       },
-      newRoom,
+      newRoomId,
       true,
     );
 
     return {
       token,
-      room: newRoom,
+      room: newRoomId,
       paxPerCall: meetFeatures.paxPerCall,
       appId: configuration().jitsi.appId,
     };

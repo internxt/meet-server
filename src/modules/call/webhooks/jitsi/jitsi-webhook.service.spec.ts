@@ -3,9 +3,8 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
-import { RoomUserUseCase } from '../../room-user.usecase';
 import { Room } from '../../domain/room.domain';
-import { RoomUseCase } from '../../room.usecase';
+import { RoomService } from '../../services/room.service';
 import {
   JitsiGenericWebHookEvent,
   JitsiWebhookPayload,
@@ -29,8 +28,7 @@ jest.mock('crypto', () => {
 
 describe('JitsiWebhookService', () => {
   let service: JitsiWebhookService;
-  let roomUseCase: DeepMocked<RoomUseCase>;
-  let roomUserUseCase: DeepMocked<RoomUserUseCase>;
+  let roomService: DeepMocked<RoomService>;
   let configService: DeepMocked<ConfigService>;
 
   const minimalRoom = new Room({
@@ -40,29 +38,22 @@ describe('JitsiWebhookService', () => {
   });
 
   beforeEach(async () => {
-    roomUseCase = createMock<RoomUseCase>();
-    roomUserUseCase = createMock<RoomUserUseCase>();
-    configService = createMock<ConfigService>();
-
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        JitsiWebhookService,
-        {
-          provide: ConfigService,
-          useValue: configService,
-        },
-        {
-          provide: RoomUseCase,
-          useValue: roomUseCase,
-        },
-        {
-          provide: RoomUserUseCase,
-          useValue: roomUserUseCase,
-        },
-      ],
-    }).compile();
+      providers: [JitsiWebhookService],
+    })
+      .useMocker(createMock)
+      .compile();
 
     service = module.get<JitsiWebhookService>(JitsiWebhookService);
+    roomService = module.get<DeepMocked<RoomService>>(RoomService);
+    configService = module.get<DeepMocked<ConfigService>>(ConfigService);
+
+    // Default config mock setup
+    configService.get.mockImplementation((key, defaultValue) => {
+      if (key === 'jitsiWebhook.events.participantLeft') return true;
+      if (key === 'jitsiWebhook.secret') return undefined;
+      return defaultValue;
+    });
 
     // Mock logger
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
@@ -85,7 +76,8 @@ describe('JitsiWebhookService', () => {
         return undefined;
       });
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(minimalRoom);
+      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
+      roomService.removeUserFromRoom.mockResolvedValue(undefined);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -105,13 +97,9 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      const removeUserFromRoomSpy = jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockResolvedValueOnce(undefined);
-
       await service.handleParticipantLeft(mockEvent);
 
-      expect(removeUserFromRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         'test-participant-id',
         minimalRoom,
       );
@@ -130,7 +118,9 @@ describe('JitsiWebhookService', () => {
         isClosed: false,
       });
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(ownerRoom);
+      roomService.getRoomByRoomId.mockResolvedValue(ownerRoom);
+      roomService.closeRoom.mockResolvedValue(undefined);
+      roomService.removeUserFromRoom.mockResolvedValue(undefined);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -150,19 +140,11 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      const closeRoomSpy = jest
-        .spyOn(roomUseCase, 'closeRoom')
-        .mockResolvedValueOnce(undefined);
-
-      const removeUserFromRoomSpy = jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockResolvedValueOnce(undefined);
-
       await service.handleParticipantLeft(mockEvent);
 
-      expect(closeRoomSpy).toHaveBeenCalledWith('test-room-id');
+      expect(roomService.closeRoom).toHaveBeenCalledWith('test-room-id');
 
-      expect(removeUserFromRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         'test-participant-id',
         ownerRoom,
       );
@@ -181,7 +163,9 @@ describe('JitsiWebhookService', () => {
         isClosed: false,
       });
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(ownerRoom);
+      roomService.getRoomByRoomId.mockResolvedValue(ownerRoom);
+      roomService.closeRoom.mockResolvedValue(undefined);
+      roomService.removeUserFromRoom.mockResolvedValue(undefined);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -201,19 +185,11 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      const closeRoomSpy = jest
-        .spyOn(roomUseCase, 'closeRoom')
-        .mockResolvedValueOnce(undefined);
-
-      const removeUserFromRoomSpy = jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockResolvedValueOnce(undefined);
-
       await service.handleParticipantLeft(mockEvent);
 
-      expect(closeRoomSpy).not.toHaveBeenCalled();
+      expect(roomService.closeRoom).not.toHaveBeenCalled();
 
-      expect(removeUserFromRoomSpy).toHaveBeenCalledWith(
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
         'test-participant-id',
         ownerRoom,
       );
@@ -225,6 +201,9 @@ describe('JitsiWebhookService', () => {
         return undefined;
       });
 
+      // Create a new service instance with the updated config mock
+      const testService = new JitsiWebhookService(configService, roomService);
+
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
         customerId: 'customer-id',
@@ -243,19 +222,9 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      service = new JitsiWebhookService(
-        configService,
-        roomUseCase,
-        roomUserUseCase,
-      );
+      await testService.handleParticipantLeft(mockEvent);
 
-      const removeUserFromRoomSpy = jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockResolvedValueOnce(undefined);
-
-      await service.handleParticipantLeft(mockEvent);
-
-      expect(removeUserFromRoomSpy).not.toHaveBeenCalled();
+      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
     });
 
     it('should handle missing room ID in FQN', async () => {
@@ -282,13 +251,9 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      const removeUserFromRoomSpy = jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockResolvedValueOnce(undefined);
-
       await service.handleParticipantLeft(mockEvent);
 
-      expect(removeUserFromRoomSpy).not.toHaveBeenCalled();
+      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
     });
 
     it('should handle missing participant ID', async () => {
@@ -315,13 +280,9 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      const removeUserFromRoomSpy = jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockResolvedValueOnce(undefined);
-
       await service.handleParticipantLeft(mockEvent);
 
-      expect(removeUserFromRoomSpy).not.toHaveBeenCalled();
+      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
     });
 
     it('should handle errors thrown during processing', async () => {
@@ -330,7 +291,7 @@ describe('JitsiWebhookService', () => {
         return undefined;
       });
 
-      roomUseCase.getRoomByRoomId.mockResolvedValueOnce(minimalRoom);
+      roomService.getRoomByRoomId.mockResolvedValueOnce(minimalRoom);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -351,9 +312,8 @@ describe('JitsiWebhookService', () => {
       };
 
       const error = new Error('Failed to process');
-      jest
-        .spyOn(roomUserUseCase, 'removeUserFromRoom')
-        .mockRejectedValueOnce(error);
+      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
+      roomService.removeUserFromRoom.mockRejectedValue(error);
 
       await expect(service.handleParticipantLeft(mockEvent)).rejects.toThrow(
         error,
@@ -372,15 +332,14 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      service = new JitsiWebhookService(
-        configService,
-        roomUseCase,
-        roomUserUseCase,
-      );
+      // Create a new service instance with the updated config mock
+      const testService = new JitsiWebhookService(configService, roomService);
 
       const headers = { 'content-type': 'application/json' };
 
-      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(true);
+      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
+        true,
+      );
     });
 
     it('should fail validation if signature is missing', () => {
@@ -389,16 +348,13 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      service = new JitsiWebhookService(
-        configService,
-        roomUseCase,
-        roomUserUseCase,
-      );
-
+      const testService = new JitsiWebhookService(configService, roomService);
       const headers = { 'content-type': 'application/json' };
       const rawBody = JSON.stringify({ test: 'data' });
 
-      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
+      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
+        false,
+      );
     });
 
     it('should fail validation if raw body is missing', () => {
@@ -407,18 +363,15 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      service = new JitsiWebhookService(
-        configService,
-        roomUseCase,
-        roomUserUseCase,
-      );
-
+      const testService = new JitsiWebhookService(configService, roomService);
       const headers = {
         'content-type': 'application/json',
         'x-jaas-signature': 'signature',
       };
 
-      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
+      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
+        false,
+      );
     });
 
     it('should validate correctly with valid signature', () => {
@@ -428,12 +381,7 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      service = new JitsiWebhookService(
-        configService,
-        roomUseCase,
-        roomUserUseCase,
-      );
-
+      const testService = new JitsiWebhookService(configService, roomService);
       const signature =
         't=1757430085,v1=LnyXpAysJpOLDj6kZ43+QrzcqpXcPW/do7LlSCfhVVs=';
 
@@ -444,7 +392,9 @@ describe('JitsiWebhookService', () => {
 
       (crypto.timingSafeEqual as jest.Mock).mockReturnValue(true);
 
-      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(true);
+      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
+        true,
+      );
     });
 
     it('should fail validation with invalid signature', () => {
@@ -454,12 +404,7 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      service = new JitsiWebhookService(
-        configService,
-        roomUseCase,
-        roomUserUseCase,
-      );
-
+      const testService = new JitsiWebhookService(configService, roomService);
       const headers = {
         'content-type': 'application/json',
         'x-jaas-signature': 'invalid-signature',
@@ -467,7 +412,9 @@ describe('JitsiWebhookService', () => {
 
       (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
 
-      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
+      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
+        false,
+      );
     });
   });
 });
