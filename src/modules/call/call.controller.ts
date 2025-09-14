@@ -1,10 +1,10 @@
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Get,
   HttpCode,
+  HttpException,
   InternalServerErrorException,
   Logger,
   Param,
@@ -27,8 +27,8 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { OptionalAuth } from '../auth/decorators/optional-auth.decorator';
 import { User } from '../auth/decorators/user.decorator';
 import { UserTokenData } from '../auth/dto/user.dto';
-import { UsersInRoomDto } from '../room/dto/users-in-room.dto';
-import { RoomUserUseCase } from '../room/room-user.usecase';
+import { UsersInRoomDto } from './dto/users-in-room.dto';
+import { RoomService } from './services/room.service';
 import { CallUseCase } from './call.usecase';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
@@ -41,7 +41,7 @@ export class CallController {
 
   constructor(
     private readonly callUseCase: CallUseCase,
-    private readonly roomUserUseCase: RoomUserUseCase,
+    private readonly roomService: RoomService,
   ) {}
 
   @Post('/')
@@ -70,32 +70,26 @@ export class CallController {
     }
 
     try {
-      await this.callUseCase.validateUserHasNoActiveRoom(uuid, email);
       const call = await this.callUseCase.createCallAndRoom(user);
       return call;
     } catch (error) {
       const err = error as Error;
       this.logger.error(
-        `Failed to create call: ${err.message}`,
         {
           userId: uuid,
           email: email,
-          error: err.name,
+          err,
         },
-        err.stack,
+        'Failed to create a call and room',
       );
 
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ConflictException ||
-        error instanceof InternalServerErrorException
-      ) {
+      if (error instanceof HttpException) {
         throw error;
       }
 
       throw new InternalServerErrorException(
         'An unexpected error occurred while creating the call',
-        { cause: err.stack ?? err.message },
+        { cause: err.message },
       );
     }
   }
@@ -151,7 +145,7 @@ export class CallController {
   @ApiNotFoundResponse({ description: 'Call/Room not found' })
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   getUsersInCall(@Param('id') roomId: string): Promise<UsersInRoomDto[]> {
-    return this.roomUserUseCase.getUsersInRoom(roomId);
+    return this.roomService.getUsersInRoom(roomId);
   }
 
   @Post('/:id/users/leave')

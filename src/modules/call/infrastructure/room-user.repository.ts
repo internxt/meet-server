@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { OmitCreateProperties } from 'src/types/OmitCreateProperties';
-import { RoomUser, RoomUserAttributes } from './room-user.domain';
-import { RoomUserModel } from './models/room-user.model';
+import { OmitCreateProperties } from '../../../shared/types/OmitCreateProperties';
+import { RoomUser, RoomUserAttributes } from '../domain/room-user.domain';
+import { RoomUserModel } from '../models/room-user.model';
 
 @Injectable()
 export class SequelizeRoomUserRepository {

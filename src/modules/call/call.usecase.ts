@@ -1,19 +1,16 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { UserTokenData } from '../auth/dto/user.dto';
-import { RoomUserUseCase } from '../room/room-user.usecase';
-import { Room } from '../room/room.domain';
-import { RoomUseCase } from '../room/room.usecase';
-import { User } from '../user/user.domain';
-import { CallService } from './call.service';
+import { RoomService } from './services/room.service';
+import { Room } from './domain/room.domain';
+import { User } from '../../shared/user/user.domain';
+import { CallService } from './services/call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallResponseDto } from './dto/join-call.dto';
 
@@ -23,111 +20,39 @@ export class CallUseCase {
 
   constructor(
     private readonly callService: CallService,
-    private readonly roomUseCase: RoomUseCase,
-    private readonly roomUserUseCase: RoomUserUseCase,
+    private readonly roomService: RoomService,
   ) {}
+
+  async createCallAndRoom(
+    user: User | UserTokenData['payload'],
+  ): Promise<CreateCallResponseDto> {
+    await this.validateUserHasNoActiveRoom(user.uuid, user.email);
+
+    const call = await this.callService.createCallToken(user);
+
+    const newRoom = new Room({
+      id: call.room,
+      hostId: user.uuid,
+      maxUsersAllowed: call.paxPerCall,
+    });
+
+    await this.roomService.createRoom(newRoom);
+
+    return call;
+  }
 
   async validateUserHasNoActiveRoom(
     uuid: string,
     email: string,
   ): Promise<void> {
-    try {
-      const existingRoom = await this.roomUseCase.getOpenRoomByHostId(uuid);
-      if (existingRoom) {
-        this.logger.warn(
-          `User ${email} already has an active room as host: ${existingRoom.id}`,
-        );
-        throw new ConflictException('User already has an active room as host');
-      }
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        throw error;
-      }
-      const err = error as Error;
-      this.logger.error(
-        `Failed to validate user room: ${err.message}`,
-        { userId: uuid, email },
-        err.stack,
+    const activeRoom = await this.roomService.getOpenRoomByHostId(uuid);
+
+    if (activeRoom) {
+      this.logger.warn(
+        `User ${email} already has an active room as host: ${activeRoom.id}`,
       );
-      throw new InternalServerErrorException(
-        'Failed to validate user room status',
-        { cause: err },
-      );
+      throw new ConflictException('User already has an active room as host');
     }
-  }
-
-  async createCallAndRoom(
-    user: User | UserTokenData['payload'],
-  ): Promise<CreateCallResponseDto> {
-    try {
-      const call = await this.callService.createCallToken(user);
-      await this.createRoomForCall(call, user.uuid, user.email);
-      this.logger.log(`Successfully created call for user: ${user.email}`);
-      return call;
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(
-        `Failed to create call and room: ${err.message}`,
-        { userId: user.uuid, email: user.email },
-        err.stack,
-      );
-      throw err;
-    }
-  }
-
-  async createRoomForCall(
-    call: CreateCallResponseDto,
-    uuid: string,
-    email: string,
-  ): Promise<void> {
-    try {
-      await this.roomUseCase.createRoom(
-        new Room({
-          id: call.room,
-          hostId: uuid,
-          maxUsersAllowed: call.paxPerCall,
-        }),
-      );
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(
-        `Failed to create room: ${err.message}`,
-        { roomId: call.room, userId: uuid, email },
-        err.stack,
-      );
-      throw new ConflictException(
-        'Failed to create room. Room might already exist.',
-      );
-    }
-  }
-
-  public handleError(
-    error: unknown,
-    context: { uuid: string; email: string },
-  ): void {
-    const err = error as Error;
-    this.logger.error(
-      `Failed to create call: ${err.message}`,
-      {
-        userId: context.uuid,
-        email: context.email,
-        error: err.name,
-      },
-      err.stack,
-    );
-
-    if (
-      error instanceof BadRequestException ||
-      error instanceof ConflictException ||
-      error instanceof InternalServerErrorException
-    ) {
-      return;
-    }
-
-    throw new InternalServerErrorException(
-      'An unexpected error occurred while creating the call',
-      { cause: err },
-    );
   }
 
   async joinCall(
@@ -140,70 +65,42 @@ export class CallUseCase {
       email?: string;
     },
   ): Promise<JoinCallResponseDto> {
-    try {
-      const room = await this.roomUseCase.getRoomByRoomId(roomId);
-      if (!room) {
-        throw new NotFoundException(`Specified room not found`);
-      }
-
-      const processedUserData = this.processUserData(userData);
-      const isOwner = processedUserData.userId === room.hostId;
-
-      if (!isOwner && room.isClosed) {
-        throw new ForbiddenException('Room is closed');
-      }
-
-      const roomUser = await this.roomUserUseCase.addUserToRoom(
-        roomId,
-        processedUserData,
-      );
-
-      // Generate token for the user
-      const tokenData = this.callService.createCallTokenForParticipant(
-        roomUser.userId,
-        roomId,
-        !!roomUser.anonymous,
-        isOwner,
-        processedUserData,
-      );
-
-      if (processedUserData.userId === room.hostId && room.isClosed) {
-        await this.roomUseCase.openRoom(roomId);
-      }
-
-      return {
-        token: tokenData.token,
-        room: roomId,
-        userId: roomUser.userId,
-        appId: tokenData.appId,
-      };
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ConflictException ||
-        error instanceof NotFoundException ||
-        error instanceof InternalServerErrorException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-
-      const err = error as Error;
-      this.logger.error(
-        `Failed to join call: ${err.message}`,
-        {
-          roomId,
-          userData,
-          error: err.name,
-        },
-        err.stack,
-      );
-
-      throw new InternalServerErrorException(
-        'An unexpected error occurred while joining the call',
-        { cause: err },
-      );
+    const room = await this.roomService.getRoomByRoomId(roomId);
+    if (!room) {
+      throw new NotFoundException(`Specified room not found`);
     }
+
+    const processedUserData = this.processUserData(userData);
+    const isOwner = processedUserData.userId === room.hostId;
+
+    if (!isOwner && room.isClosed) {
+      throw new ForbiddenException('Room is closed');
+    }
+
+    const roomUser = await this.roomService.addUserToRoom(
+      roomId,
+      processedUserData,
+    );
+
+    // Generate token for the user
+    const tokenData = this.callService.createCallTokenForParticipant(
+      roomUser.userId,
+      roomId,
+      !!roomUser.anonymous,
+      isOwner,
+      processedUserData,
+    );
+
+    if (processedUserData.userId === room.hostId && room.isClosed) {
+      await this.roomService.openRoom(roomId);
+    }
+
+    return {
+      token: tokenData.token,
+      room: roomId,
+      userId: roomUser.userId,
+      appId: tokenData.appId,
+    };
   }
 
   private processUserData(userData: {
@@ -240,51 +137,22 @@ export class CallUseCase {
   }
 
   async leaveCall(roomId: string, userId: string): Promise<void> {
-    if (!userId) {
-      throw new BadRequestException('User ID is required');
+    const room = await this.roomService.getRoomByRoomId(roomId);
+
+    if (!room) {
+      throw new NotFoundException(`Specified room not found`);
     }
 
-    try {
-      const room = await this.roomUseCase.getRoomByRoomId(roomId);
-      if (!room) {
-        throw new NotFoundException(`Specified room not found`);
-      }
+    const isHostLeaving = room.hostId === userId;
 
-      const isHostLeaving = room.hostId === userId;
+    await this.roomService.removeUserFromRoom(userId, room);
 
-      await this.roomUserUseCase.removeUserFromRoom(userId, room);
+    const remainingUsers = await this.roomService.countUsersInRoom(roomId);
 
-      const remainingUsers =
-        await this.roomUserUseCase.countUsersInRoom(roomId);
-
-      if (remainingUsers === 0) {
-        await this.roomUseCase.removeRoom(roomId);
-      } else if (isHostLeaving) {
-        await this.roomUseCase.closeRoom(roomId);
-      }
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
-
-      const err = error as Error;
-      this.logger.error(
-        `Failed to leave call: ${err.message}`,
-        {
-          roomId,
-          userId,
-          error: err.name,
-        },
-        err.stack,
-      );
-
-      throw new InternalServerErrorException(
-        'An unexpected error occurred while leaving the call',
-        { cause: err },
-      );
+    if (remainingUsers === 0) {
+      await this.roomService.removeRoom(roomId);
+    } else if (isHostLeaving) {
+      await this.roomService.closeRoom(roomId);
     }
   }
 }

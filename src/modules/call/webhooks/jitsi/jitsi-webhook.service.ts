@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { RoomUserUseCase } from '../../room/room-user.usecase';
-import { RoomUseCase } from '../../room/room.usecase';
+import { RoomService } from '../../services/room.service';
 import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 @Injectable()
@@ -13,8 +12,7 @@ export class JitsiWebhookService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly roomUseCase: RoomUseCase,
-    private readonly roomUserUseCase: RoomUserUseCase,
+    private readonly roomService: RoomService,
   ) {
     this.webhookSecret = this.configService.get<string>('jitsiWebhook.secret');
     this.participantLeftEnabled = this.configService.get<boolean>(
@@ -57,7 +55,7 @@ export class JitsiWebhookService {
         return;
       }
 
-      const room = await this.roomUseCase.getRoomByRoomId(roomId);
+      const room = await this.roomService.getRoomByRoomId(roomId);
 
       if (!room) {
         this.logger.warn(`Room with ID ${roomId} not found`);
@@ -65,9 +63,9 @@ export class JitsiWebhookService {
       }
 
       const isOwner = participantId === room.hostId;
-      if (isOwner) await this.roomUseCase.closeRoom(roomId);
+      if (isOwner) await this.roomService.closeRoom(roomId);
 
-      await this.roomUserUseCase.removeUserFromRoom(participantId, room);
+      await this.roomService.removeUserFromRoom(participantId, room);
 
       this.logger.log(
         `Successfully processed PARTICIPANT_LEFT event for participant ${participantId} in room ${roomId}`,

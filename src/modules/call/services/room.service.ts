@@ -4,24 +4,59 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { SequelizeRoomUserRepository } from './room-user.repository';
-import { RoomUser } from './room-user.domain';
+import { SequelizeRoomRepository } from '../infrastructure/room.repository';
+import { SequelizeRoomUserRepository } from '../infrastructure/room-user.repository';
+import { Room, RoomAttributes } from '../domain/room.domain';
+import { RoomUser } from '../domain/room-user.domain';
 import { v4 as uuidv4 } from 'uuid';
-import { RoomUseCase } from './room.usecase';
-import { UsersInRoomDto } from './dto/users-in-room.dto';
-import { UserRepository } from '../user/user.repository';
-import { AvatarService } from '../../externals/avatar/avatar.service';
-import { User } from '../user/user.domain';
-import { Room } from './room.domain';
+import { UsersInRoomDto } from '../dto/users-in-room.dto';
+import { UserRepository } from '../../../shared/user/user.repository';
+import { AvatarService } from '../../../externals/avatar/avatar.service';
+import { User } from '../../../shared/user/user.domain';
 
 @Injectable()
-export class RoomUserUseCase {
+export class RoomService {
   constructor(
+    private readonly roomRepository: SequelizeRoomRepository,
     private readonly roomUserRepository: SequelizeRoomUserRepository,
-    private readonly roomUseCase: RoomUseCase,
     private readonly userRepository: UserRepository,
     private readonly avatarService: AvatarService,
   ) {}
+
+  async createRoom(data: Room) {
+    return this.roomRepository.create(data);
+  }
+
+  async getRoomByRoomId(id: RoomAttributes['id']) {
+    return this.roomRepository.findById(id);
+  }
+
+  async getRoomByHostId(hostId: string) {
+    return await this.roomRepository.findByHostId(hostId);
+  }
+
+  async getOpenRoomByHostId(hostId: string) {
+    return await this.roomRepository.findByHostId(hostId, {
+      isClosed: false,
+    });
+  }
+
+  async updateRoom(id: RoomAttributes['id'], data: Partial<RoomAttributes>) {
+    await this.roomRepository.update(id, data);
+    return this.getRoomByRoomId(id);
+  }
+
+  async removeRoom(id: string) {
+    return this.roomRepository.delete(id);
+  }
+
+  async closeRoom(id: string) {
+    return this.roomRepository.update(id, { isClosed: true });
+  }
+
+  async openRoom(id: string) {
+    return this.roomRepository.update(id, { isClosed: false });
+  }
 
   async addUserToRoom(
     roomId: string,
@@ -32,7 +67,7 @@ export class RoomUserUseCase {
       anonymous?: boolean;
     },
   ): Promise<RoomUser> {
-    const room = await this.roomUseCase.getRoomByRoomId(roomId);
+    const room = await this.getRoomByRoomId(roomId);
     if (!room) {
       throw new NotFoundException(`Specified room not found`);
     }
@@ -83,8 +118,21 @@ export class RoomUserUseCase {
     }));
   }
 
+  async countUsersInRoom(roomId: string): Promise<number> {
+    const room = await this.getRoomByRoomId(roomId);
+    if (!room) {
+      throw new NotFoundException(`Specified room not found`);
+    }
+
+    return this.roomUserRepository.countByRoomId(roomId);
+  }
+
+  async removeUserFromRoom(userId: string, room: Room): Promise<void> {
+    await this.roomUserRepository.deleteByUserIdAndRoomId(userId, room.id);
+  }
+
   private async getRoomOrThrow(roomId: string) {
-    const room = await this.roomUseCase.getRoomByRoomId(roomId);
+    const room = await this.getRoomByRoomId(roomId);
     if (!room) {
       throw new NotFoundException(`Specified room not found`);
     }
@@ -110,18 +158,5 @@ export class RoomUserUseCase {
     );
 
     return userAvatars;
-  }
-
-  async countUsersInRoom(roomId: string): Promise<number> {
-    const room = await this.roomUseCase.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
-    }
-
-    return this.roomUserRepository.countByRoomId(roomId);
-  }
-
-  async removeUserFromRoom(userId: string, room: Room): Promise<void> {
-    await this.roomUserRepository.deleteByUserIdAndRoomId(userId, room.id);
   }
 }

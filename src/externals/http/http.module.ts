@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { HttpsAgent } from 'agentkeepalive';
