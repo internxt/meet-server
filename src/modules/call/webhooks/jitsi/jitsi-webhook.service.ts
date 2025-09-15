@@ -29,13 +29,6 @@ export class JitsiWebhookService {
   async handleParticipantLeft(
     payload: JitsiParticipantLeftWebHookPayload,
   ): Promise<void> {
-    if (!this.participantLeftEnabled) {
-      this.logger.log(
-        'PARTICIPANT_LEFT event handling is disabled in configuration',
-      );
-      return;
-    }
-
     try {
       this.logger.log(
         `Handling PARTICIPANT_LEFT event for participant: ${payload.data.id}`,
