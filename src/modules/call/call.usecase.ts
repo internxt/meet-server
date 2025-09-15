@@ -26,6 +26,17 @@ export class CallUseCase {
   async createCallAndRoom(
     user: User | UserTokenData['payload'],
   ): Promise<CreateCallResponseDto> {
+    const activeRoom = await this.roomService.getOpenRoomByHostId(user.uuid);
+
+    // TODO: Remove this check and look for a better way to handle this
+    if (activeRoom) {
+      this.logger.warn(
+        { userId: user.uuid, roomId: activeRoom.id },
+        `User already has an active room as host, closing previous room`,
+      );
+      await this.roomService.removeRoom(activeRoom.id);
+    }
+
     await this.validateUserHasNoActiveRoom(user.uuid, user.email);
 
     const call = await this.callService.createCallToken(user);
