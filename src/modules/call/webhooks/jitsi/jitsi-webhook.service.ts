@@ -8,17 +8,12 @@ import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipan
 export class JitsiWebhookService {
   private readonly logger = new Logger(JitsiWebhookService.name);
   private readonly webhookSecret: string | undefined;
-  private readonly participantLeftEnabled: boolean;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly roomService: RoomService,
   ) {
     this.webhookSecret = this.configService.get<string>('jitsiWebhook.secret');
-    this.participantLeftEnabled = this.configService.get<boolean>(
-      'jitsiWebhook.events.participantLeft',
-      true,
-    );
   }
 
   /**
@@ -31,7 +26,8 @@ export class JitsiWebhookService {
   ): Promise<void> {
     try {
       this.logger.log(
-        `Handling PARTICIPANT_LEFT event for participant: ${payload.data.id}`,
+        { idempotencyKey: payload.idempotencyKey },
+        'Handling PARTICIPANT_LEFT event',
       );
 
       const roomId = this.extractRoomId(payload.fqn);
@@ -51,7 +47,7 @@ export class JitsiWebhookService {
       const room = await this.roomService.getRoomByRoomId(roomId);
 
       if (!room) {
-        this.logger.warn(`Room with ID ${roomId} not found`);
+        this.logger.warn({ roomId }, 'Room not found');
         return;
       }
 
@@ -61,10 +57,11 @@ export class JitsiWebhookService {
       await this.roomService.removeUserFromRoom(participantId, room);
 
       this.logger.log(
-        `Successfully processed PARTICIPANT_LEFT event for participant ${participantId} in room ${roomId}`,
+        { participantId, roomId },
+        'Successfully processed PARTICIPANT_LEFT event',
       );
-    } catch (error) {
-      this.logger.error('Error handling PARTICIPANT_LEFT event', error);
+    } catch (error: unknown) {
+      this.logger.error({ error }, 'Error handling PARTICIPANT_LEFT event');
       throw error;
     }
   }

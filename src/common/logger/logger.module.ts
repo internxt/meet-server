@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import { Request } from 'express';
 import { AppLoggerService } from './pino-logger.service';
+import { v4 } from 'uuid';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -11,6 +12,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
     PinoLoggerModule.forRoot({
       pinoHttp: {
         level: isDevelopment ? 'debug' : 'info',
+        genReqId: (req: Request) => req.headers['x-request-id'] ?? v4(),
         transport: isDevelopment
           ? {
               target: 'pino-pretty',
