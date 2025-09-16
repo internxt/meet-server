@@ -69,8 +69,11 @@ export class JitsiWebhookController {
           break;
 
         default:
-          this.logger.log(
-            `Ignoring unhandled event type: ${payload.eventType}`,
+          this.logger.warn(
+            {
+              eventType: payload.eventType,
+            },
+            'Ignoring unhandled event type',
           );
           break;
       }
@@ -78,10 +81,7 @@ export class JitsiWebhookController {
       return { success: true };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        this.logger.error(
-          `Error processing webhook event: ${error.message}`,
-          error.stack,
-        );
+        this.logger.error({ error }, 'Error processing webhook event');
       }
       throw new BadRequestException(`Error processing webhook event`);
     }
