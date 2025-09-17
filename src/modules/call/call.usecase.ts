@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 } from 'uuid';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { RoomService } from './services/room.service';
 import { Room } from './domain/room.domain';
@@ -73,6 +73,7 @@ export class CallUseCase {
       name?: string;
       lastName?: string;
       anonymous?: boolean;
+      anonymousId?: string;
       email?: string;
     },
   ): Promise<JoinCallResponseDto> {
@@ -81,8 +82,17 @@ export class CallUseCase {
       throw new NotFoundException(`Specified room not found`);
     }
 
-    const processedUserData = this.processUserData(userData);
-    const isOwner = processedUserData.userId === room.hostId;
+    const joiningUserData = {
+      userId: userData?.anonymous
+        ? (userData?.anonymousId ?? v4())
+        : userData?.userId,
+      name: userData?.name,
+      lastName: userData?.lastName,
+      anonymous: userData?.anonymous || !userData.userId,
+      email: userData?.email,
+    };
+
+    const isOwner = joiningUserData.userId === room.hostId;
 
     if (!isOwner && room.isClosed) {
       throw new ForbiddenException('Room is closed');
@@ -90,7 +100,7 @@ export class CallUseCase {
 
     const roomUser = await this.roomService.addUserToRoom(
       roomId,
-      processedUserData,
+      joiningUserData,
     );
 
     // Generate token for the user
@@ -99,10 +109,10 @@ export class CallUseCase {
       roomId,
       !!roomUser.anonymous,
       isOwner,
-      processedUserData,
+      joiningUserData,
     );
 
-    if (processedUserData.userId === room.hostId && room.isClosed) {
+    if (joiningUserData.userId === room.hostId && room.isClosed) {
       await this.roomService.openRoom(roomId);
     }
 
@@ -111,39 +121,6 @@ export class CallUseCase {
       room: roomId,
       userId: roomUser.userId,
       appId: tokenData.appId,
-    };
-  }
-
-  private processUserData(userData: {
-    userId?: string;
-    name?: string;
-    lastName?: string;
-    anonymous?: boolean;
-    email?: string;
-  }): {
-    userId: string;
-    name?: string;
-    lastName?: string;
-    anonymous: boolean;
-    email?: string;
-  } {
-    const { userId, name, lastName, anonymous = false, email } = userData;
-
-    if (anonymous || !userId) {
-      return {
-        userId: uuidv4(),
-        name,
-        lastName,
-        anonymous: true,
-      };
-    }
-
-    return {
-      userId,
-      name,
-      lastName,
-      anonymous: false,
-      email,
     };
   }
 

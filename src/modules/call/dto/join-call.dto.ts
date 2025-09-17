@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class JoinCallDto {
   @ApiPropertyOptional({
@@ -21,11 +21,20 @@ export class JoinCallDto {
   @ApiPropertyOptional({
     description: 'Whether the user is joining anonymously',
     type: Boolean,
-    default: false,
+    deprecated: true,
   })
   @IsBoolean()
   @IsOptional()
   anonymous?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Id to use for anonymous user',
+    type: String,
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  anonymousId?: string;
 
   @IsString()
   @IsOptional()

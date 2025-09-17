@@ -79,14 +79,9 @@ export class RoomService {
     }
 
     const { userId, name, lastName, anonymous = false } = userData;
-    let userIdToUse = userId;
-
-    if (anonymous || !userIdToUse) {
-      userIdToUse = uuidv4();
-    }
 
     const existingUser = await this.roomUserRepository.findByUserIdAndRoomId(
-      userIdToUse,
+      userId,
       roomId,
     );
 
@@ -96,7 +91,7 @@ export class RoomService {
 
     return this.roomUserRepository.create({
       roomId,
-      userId: userIdToUse,
+      userId,
       name,
       lastName,
       anonymous: Boolean(anonymous),
