@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -98,10 +99,28 @@ export class CallUseCase {
       throw new ForbiddenException('Room is closed');
     }
 
-    const roomUser = await this.roomService.addUserToRoom(
-      roomId,
-      joiningUserData,
+    const existentUserInRoom = await this.roomService.getUserInRoom(
+      joiningUserData.userId,
+      room.id,
     );
+
+    const currentUsersCount = await this.roomService.countUsersInRoom(room.id);
+
+    const isRoomFull = currentUsersCount >= room.maxUsersAllowed;
+
+    if (isRoomFull && !existentUserInRoom) {
+      throw new BadRequestException('The room is full');
+    }
+
+    const roomUser =
+      existentUserInRoom ??
+      (await this.roomService.createUserInRoom({
+        roomId: room.id,
+        userId: joiningUserData?.userId,
+        name: joiningUserData?.name,
+        lastName: joiningUserData?.lastName,
+        anonymous: Boolean(joiningUserData?.anonymous),
+      }));
 
     // Generate token for the user
     const tokenData = this.callService.createCallTokenForParticipant(
