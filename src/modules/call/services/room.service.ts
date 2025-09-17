@@ -7,7 +7,7 @@ import {
 import { SequelizeRoomRepository } from '../infrastructure/room.repository';
 import { SequelizeRoomUserRepository } from '../infrastructure/room-user.repository';
 import { Room, RoomAttributes } from '../domain/room.domain';
-import { RoomUser } from '../domain/room-user.domain';
+import { RoomUser, RoomUserAttributes } from '../domain/room-user.domain';
 import { v4 as uuidv4 } from 'uuid';
 import { UsersInRoomDto } from '../dto/users-in-room.dto';
 import { UserRepository } from '../../../shared/user/user.repository';
@@ -25,6 +25,10 @@ export class RoomService {
 
   async createRoom(data: Room) {
     return this.roomRepository.create(data);
+  }
+
+  async createUserInRoom(data: Omit<RoomUserAttributes, 'id'>) {
+    return this.roomUserRepository.create(data);
   }
 
   async getRoomByRoomId(id: RoomAttributes['id']) {
@@ -59,7 +63,7 @@ export class RoomService {
   }
 
   async addUserToRoom(
-    roomId: string,
+    room: Room,
     userData: {
       userId?: string;
       name?: string;
@@ -67,27 +71,19 @@ export class RoomService {
       anonymous?: boolean;
     },
   ): Promise<RoomUser> {
-    const room = await this.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
-    }
+    const currentUsersCount = await this.roomUserRepository.countByRoomId(
+      room.id,
+    );
 
-    const currentUsersCount =
-      await this.roomUserRepository.countByRoomId(roomId);
     if (currentUsersCount >= room.maxUsersAllowed) {
       throw new BadRequestException('The room is full');
     }
 
     const { userId, name, lastName, anonymous = false } = userData;
-    let userIdToUse = userId;
-
-    if (anonymous || !userIdToUse) {
-      userIdToUse = uuidv4();
-    }
 
     const existingUser = await this.roomUserRepository.findByUserIdAndRoomId(
-      userIdToUse,
-      roomId,
+      userId,
+      room.id,
     );
 
     if (existingUser) {
@@ -95,8 +91,8 @@ export class RoomService {
     }
 
     return this.roomUserRepository.create({
-      roomId,
-      userId: userIdToUse,
+      roomId: room.id,
+      userId,
       name,
       lastName,
       anonymous: Boolean(anonymous),
@@ -158,5 +154,14 @@ export class RoomService {
     );
 
     return userAvatars;
+  }
+
+  async getUserInRoom(userId: string, roomId: string) {
+    const existingUser = await this.roomUserRepository.findByUserIdAndRoomId(
+      userId,
+      roomId,
+    );
+
+    return existingUser;
   }
 }
