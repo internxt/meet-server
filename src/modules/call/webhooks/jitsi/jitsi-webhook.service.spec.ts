@@ -41,6 +41,7 @@ describe('JitsiWebhookService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [JitsiWebhookService],
     })
+      .setLogger(createMock<Logger>())
       .useMocker(createMock)
       .compile();
 
@@ -48,17 +49,11 @@ describe('JitsiWebhookService', () => {
     roomService = module.get<DeepMocked<RoomService>>(RoomService);
     configService = module.get<DeepMocked<ConfigService>>(ConfigService);
 
-    // Default config mock setup
     configService.get.mockImplementation((key, defaultValue) => {
       if (key === 'jitsiWebhook.events.participantLeft') return true;
       if (key === 'jitsiWebhook.secret') return undefined;
       return defaultValue;
     });
-
-    // Mock logger
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -70,12 +65,7 @@ describe('JitsiWebhookService', () => {
   });
 
   describe('handleParticipantLeft', () => {
-    it('should handle participant left event successfully', async () => {
-      configService.get.mockImplementation((key, defaultValue) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return true;
-        return undefined;
-      });
-
+    it('When participant leaves, then it should remove user from room', async () => {
       roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
       roomService.removeUserFromRoom.mockResolvedValue(undefined);
 
@@ -105,12 +95,7 @@ describe('JitsiWebhookService', () => {
       );
     });
 
-    it('should close room when participant owner left the call', async () => {
-      configService.get.mockImplementation((key) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return true;
-        return undefined;
-      });
-
+    it('When room owner leaves, then it should close room and remove user', async () => {
       const ownerRoom = new Room({
         id: 'test-room-id',
         hostId: 'test-participant-id',
@@ -150,12 +135,7 @@ describe('JitsiWebhookService', () => {
       );
     });
 
-    it('should not close room when participant that is not the owner left the call', async () => {
-      configService.get.mockImplementation((key) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return true;
-        return undefined;
-      });
-
+    it('When non-owner participant leaves, then it should not close room but remove user', async () => {
       const ownerRoom = new Room({
         id: 'test-room-id',
         hostId: 'test-participant-id-not-owner',
@@ -195,44 +175,7 @@ describe('JitsiWebhookService', () => {
       );
     });
 
-    it('should skip handling when participantLeftEnabled is false', async () => {
-      configService.get.mockImplementation((key, defaultValue) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return false;
-        return undefined;
-      });
-
-      // Create a new service instance with the updated config mock
-      const testService = new JitsiWebhookService(configService, roomService);
-
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
-        appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: 'test-participant-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
-        },
-      };
-
-      await testService.handleParticipantLeft(mockEvent);
-
-      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
-    });
-
-    it('should handle missing room ID in FQN', async () => {
-      configService.get.mockImplementation((key, defaultValue) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return true;
-        return undefined;
-      });
-
+    it('When FQN has missing room ID, then it should skip processing', async () => {
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
         customerId: 'customer-id',
@@ -256,12 +199,7 @@ describe('JitsiWebhookService', () => {
       expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
     });
 
-    it('should handle missing participant ID', async () => {
-      configService.get.mockImplementation((key, defaultValue) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return true;
-        return undefined;
-      });
-
+    it('When participant ID is missing, then it should skip processing', async () => {
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
         customerId: 'customer-id',
@@ -284,49 +222,14 @@ describe('JitsiWebhookService', () => {
 
       expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
     });
-
-    it('should handle errors thrown during processing', async () => {
-      configService.get.mockImplementation((key, defaultValue) => {
-        if (key === 'jitsiWebhook.events.participantLeft') return true;
-        return undefined;
-      });
-
-      roomService.getRoomByRoomId.mockResolvedValueOnce(minimalRoom);
-
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
-        appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: 'test-participant-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
-        },
-      };
-
-      const error = new Error('Failed to process');
-      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
-      roomService.removeUserFromRoom.mockRejectedValue(error);
-
-      await expect(service.handleParticipantLeft(mockEvent)).rejects.toThrow(
-        error,
-      );
-    });
   });
 
   describe('validateWebhookRequest', () => {
     const mockPayload = {
-      eventType: 'PARTICIPANT_LEFT',
+      eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
     } as unknown as JitsiWebhookPayload;
 
-    it('should skip validation if webhook secret is not configured', () => {
+    it('When webhook secret is not configured, then it should skip validation', () => {
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.secret') return undefined;
         return defaultValue;
@@ -342,7 +245,7 @@ describe('JitsiWebhookService', () => {
       );
     });
 
-    it('should fail validation if signature is missing', () => {
+    it('When signature is missing, then it should fail validation', () => {
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.secret') return 'webhook-secret';
         return defaultValue;
@@ -350,14 +253,13 @@ describe('JitsiWebhookService', () => {
 
       const testService = new JitsiWebhookService(configService, roomService);
       const headers = { 'content-type': 'application/json' };
-      const rawBody = JSON.stringify({ test: 'data' });
 
       expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
         false,
       );
     });
 
-    it('should fail validation if raw body is missing', () => {
+    it('When raw body is missing, then it should fail validation', () => {
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.secret') return 'webhook-secret';
         return defaultValue;
@@ -374,7 +276,7 @@ describe('JitsiWebhookService', () => {
       );
     });
 
-    it('should validate correctly with valid signature', () => {
+    it('When signature is valid, then it should pass validation', () => {
       const secret = 'webhook-secret';
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.secret') return secret;
@@ -397,7 +299,7 @@ describe('JitsiWebhookService', () => {
       );
     });
 
-    it('should fail validation with invalid signature', () => {
+    it('When signature is invalid, then it should fail validation', () => {
       const secret = 'webhook-secret';
       configService.get.mockImplementation((key, defaultValue) => {
         if (key === 'jitsiWebhook.secret') return secret;

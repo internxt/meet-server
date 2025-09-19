@@ -1,9 +1,9 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { SequelizeRoomUserRepository } from './infrastructure/room-user.repository';
-import { RoomUserModel } from './models/room-user.model';
 import { getModelToken } from '@nestjs/sequelize';
-import { RoomUser } from './domain/room-user.domain';
+import { Test, TestingModule } from '@nestjs/testing';
+import { RoomUser } from '../domain/room-user.domain';
+import { RoomUserModel } from '../models/room-user.model';
+import { SequelizeRoomUserRepository } from './room-user.repository';
 
 describe('SequelizeRoomUserRepository', () => {
   let repository: SequelizeRoomUserRepository;

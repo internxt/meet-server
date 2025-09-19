@@ -120,7 +120,7 @@ export class CallController {
   ): Promise<JoinCallResponseDto> {
     const { uuid, email } = user || {};
     const isUserAnonymous =
-      (!!joinCallDto?.anonymousId || joinCallDto?.anonymous) ?? !user;
+      !user || !!joinCallDto?.anonymousId || joinCallDto?.anonymous === true;
 
     return await this.callUseCase.joinCall(roomId, {
       userId: uuid,

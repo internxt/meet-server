@@ -1,6 +1,6 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createMock } from '@golevelup/ts-jest';
 import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiWebhookController } from './jitsi-webhook.controller';
 import { JitsiWebhookService } from './jitsi-webhook.service';
@@ -12,22 +12,11 @@ describe('JitsiWebhookController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [JitsiWebhookController],
-      providers: [
-        {
-          provide: JitsiWebhookService,
-          useValue: {
-            validateWebhookRequest: jest.fn(),
-            handleParticipantLeft: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn(),
-          },
-        },
-      ],
-    }).compile();
+      providers: [],
+    })
+      .useMocker(createMock)
+      .setLogger(createMock())
+      .compile();
 
     controller = module.get<JitsiWebhookController>(JitsiWebhookController);
     service = module.get<JitsiWebhookService>(JitsiWebhookService);
