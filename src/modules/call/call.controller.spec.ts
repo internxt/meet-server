@@ -52,6 +52,7 @@ describe('Testing Call Endpoints', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CallController],
     })
+      .setLogger(createMock())
       .useMocker(createMock)
       .compile();
 
@@ -116,7 +117,7 @@ describe('Testing Call Endpoints', () => {
   });
 
   describe('Joining a call', () => {
-    it('should join a call with authenticated user', async () => {
+    it('When joining a call with authenticated user, then it should join successfully', async () => {
       callUseCase.joinCall.mockResolvedValue(mockJoinCallResponse);
 
       const user = mockUserPayload;
@@ -136,7 +137,7 @@ describe('Testing Call Endpoints', () => {
       });
     });
 
-    it('should join a call with anonymous user (no JWT)', async () => {
+    it('When joining a call with anonymous user (no JWT), then it should join successfully', async () => {
       callUseCase.joinCall.mockResolvedValue(mockJoinCallResponse);
 
       const result = await callController.joinCall(
@@ -148,14 +149,15 @@ describe('Testing Call Endpoints', () => {
       expect(result).toEqual(mockJoinCallResponse);
       expect(callUseCase.joinCall).toHaveBeenCalledWith(mockRoomId, {
         userId: undefined,
-        email: mockJoinCallDto.email,
+        email: undefined,
         name: mockJoinCallDto.name,
         lastName: mockJoinCallDto.lastName,
         anonymous: true,
+        anonymousId: undefined,
       });
     });
 
-    it('should set anonymous=true if anonymous flag is explicitly set', async () => {
+    it('When anonymous flag is explicitly set, then user should join as anonymous', async () => {
       callUseCase.joinCall.mockResolvedValue(mockJoinCallResponse);
 
       const anonymousDto = { ...mockJoinCallDto, anonymous: true };
@@ -267,7 +269,7 @@ describe('Testing Call Endpoints', () => {
   });
 
   describe('Getting users in a call', () => {
-    it('should get users in a call for authenticated user', async () => {
+    it('When getting users in a call for authenticated user, then it should return users list', async () => {
       roomService.getUsersInRoom.mockResolvedValue(mockUsersInRoom);
 
       const result = await callController.getUsersInCall(mockRoomId);
@@ -276,7 +278,7 @@ describe('Testing Call Endpoints', () => {
       expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
     });
 
-    it('should get users in a call for anonymous user', async () => {
+    it('When getting users in a call for anonymous user, then it should return users list', async () => {
       roomService.getUsersInRoom.mockResolvedValue(mockUsersInRoom);
 
       const result = await callController.getUsersInCall(mockRoomId);
@@ -307,7 +309,7 @@ describe('Testing Call Endpoints', () => {
       expect(roomService.getUsersInRoom).toHaveBeenCalledWith(mockRoomId);
     });
 
-    it('When no users are in the room, it should return an empty array', async () => {
+    it('When no users are in the room, then it should return an empty array', async () => {
       roomService.getUsersInRoom.mockResolvedValue([]);
 
       const result = await callController.getUsersInCall(mockRoomId);
@@ -319,7 +321,7 @@ describe('Testing Call Endpoints', () => {
   });
 
   describe('Leaving a call', () => {
-    it('should leave a call for authenticated user', async () => {
+    it('When leaving a call for authenticated user, then it should leave successfully', async () => {
       callUseCase.leaveCall.mockResolvedValue();
 
       const result = await callController.leaveCall(
@@ -334,7 +336,7 @@ describe('Testing Call Endpoints', () => {
       );
     });
 
-    it('should call leaveCall with userId from DTO when user is anonymous', async () => {
+    it('When user is anonymous, then it should call leaveCall with userId from DTO', async () => {
       const anonymousUserId = 'anonymous-user-id';
       const leaveCallDto = new LeaveCallDto();
       leaveCallDto.userId = anonymousUserId;
@@ -349,7 +351,7 @@ describe('Testing Call Endpoints', () => {
       );
     });
 
-    it('should prioritize user UUID when both authenticated user and DTO are provided', async () => {
+    it('When both authenticated user and DTO are provided, then it should prioritize user UUID', async () => {
       const leaveCallDto = new LeaveCallDto();
       leaveCallDto.userId = 'anonymous-user-id';
 
@@ -368,7 +370,7 @@ describe('Testing Call Endpoints', () => {
       );
     });
 
-    it('should pass undefined when neither authenticated user nor DTO with userId are provided', async () => {
+    it('When neither authenticated user nor DTO with userId are provided, then it should pass undefined', async () => {
       const emptyDto = new LeaveCallDto();
       callUseCase.leaveCall.mockResolvedValue();
 
@@ -377,7 +379,7 @@ describe('Testing Call Endpoints', () => {
       expect(callUseCase.leaveCall).toHaveBeenCalledWith(mockRoomId, undefined);
     });
 
-    it('should propagate NotFoundException when room is not found', async () => {
+    it('When room is not found, then it should propagate NotFoundException', async () => {
       const userToken = createMockUserToken();
 
       callUseCase.leaveCall.mockRejectedValue(
@@ -389,7 +391,7 @@ describe('Testing Call Endpoints', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should propagate BadRequestException when no userId is provided', async () => {
+    it('When no userId is provided, then it should propagate BadRequestException', async () => {
       callUseCase.leaveCall.mockRejectedValue(
         new BadRequestException('User ID is required'),
       );

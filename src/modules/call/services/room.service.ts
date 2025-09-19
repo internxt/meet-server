@@ -1,14 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SequelizeRoomRepository } from '../infrastructure/room.repository';
 import { SequelizeRoomUserRepository } from '../infrastructure/room-user.repository';
 import { Room, RoomAttributes } from '../domain/room.domain';
 import { RoomUser, RoomUserAttributes } from '../domain/room-user.domain';
-import { v4 as uuidv4 } from 'uuid';
 import { UsersInRoomDto } from '../dto/users-in-room.dto';
 import { UserRepository } from '../../../shared/user/user.repository';
 import { AvatarService } from '../../../externals/avatar/avatar.service';
@@ -62,46 +56,13 @@ export class RoomService {
     return this.roomRepository.update(id, { isClosed: false });
   }
 
-  async addUserToRoom(
-    room: Room,
-    userData: {
-      userId?: string;
-      name?: string;
-      lastName?: string;
-      anonymous?: boolean;
-    },
-  ): Promise<RoomUser> {
-    const currentUsersCount = await this.roomUserRepository.countByRoomId(
-      room.id,
-    );
-
-    if (currentUsersCount >= room.maxUsersAllowed) {
-      throw new BadRequestException('The room is full');
-    }
-
-    const { userId, name, lastName, anonymous = false } = userData;
-
-    const existingUser = await this.roomUserRepository.findByUserIdAndRoomId(
-      userId,
-      room.id,
-    );
-
-    if (existingUser) {
-      throw new ConflictException('User is already in this room');
-    }
-
-    return this.roomUserRepository.create({
-      roomId: room.id,
-      userId,
-      name,
-      lastName,
-      anonymous: Boolean(anonymous),
-    });
-  }
-
   async getUsersInRoom(roomId: string): Promise<UsersInRoomDto[]> {
-    const room = await this.getRoomOrThrow(roomId);
-    const roomUsers = await this.roomUserRepository.findAllByRoomId(room.id);
+    const roomUsers = await this.roomUserRepository.findAllByRoomId(roomId);
+
+    if (roomUsers.length === 0) {
+      return [];
+    }
+
     const users = await this.getUsersByRoomUsers(roomUsers);
     const userAvatars = await this.getUserAvatars(users);
 
@@ -115,24 +76,11 @@ export class RoomService {
   }
 
   async countUsersInRoom(roomId: string): Promise<number> {
-    const room = await this.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
-    }
-
     return this.roomUserRepository.countByRoomId(roomId);
   }
 
   async removeUserFromRoom(userId: string, room: Room): Promise<void> {
     await this.roomUserRepository.deleteByUserIdAndRoomId(userId, room.id);
-  }
-
-  private async getRoomOrThrow(roomId: string) {
-    const room = await this.getRoomByRoomId(roomId);
-    if (!room) {
-      throw new NotFoundException(`Specified room not found`);
-    }
-    return room;
   }
 
   private async getUsersByRoomUsers(roomUsers: RoomUser[]): Promise<User[]> {
