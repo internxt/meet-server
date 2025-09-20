@@ -1,5 +1,5 @@
 export interface RoomUserAttributes {
-  id: number;
+  id: string;
   roomId: string;
   userId: string;
   name?: string;
@@ -10,7 +10,7 @@ export interface RoomUserAttributes {
 }
 
 export class RoomUser implements RoomUserAttributes {
-  id: number;
+  id: string;
   roomId: string;
   userId: string;
   name?: string;
