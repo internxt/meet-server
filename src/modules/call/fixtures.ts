@@ -2,6 +2,8 @@ import { Chance } from 'chance';
 import { UserTokenData } from '../auth/dto/user.dto';
 import { Room } from './domain/room.domain';
 import { CreateCallResponseDto } from './dto/create-call.dto';
+import { RoomUser, RoomUserAttributes } from './domain/room-user.domain';
+import { User } from '../../shared/user/user.domain';
 
 const randomDataGenerator = new Chance();
 
@@ -58,3 +60,42 @@ export const createMockCallResponse = (
   ...mockCallResponse,
   ...overrides,
 });
+
+export const createMockRoomUser = (
+  overrides?: Partial<RoomUserAttributes>,
+): RoomUser => {
+  const mockRoomUserData: RoomUserAttributes = {
+    id: randomDataGenerator.integer({ min: 1, max: 1000 }),
+    roomId: randomDataGenerator.guid(),
+    userId: randomDataGenerator.guid(),
+    name: randomDataGenerator.first(),
+    lastName: randomDataGenerator.last(),
+    anonymous: false,
+    createdAt: randomDataGenerator.date(),
+    updatedAt: randomDataGenerator.date(),
+  };
+
+  return new RoomUser({
+    ...mockRoomUserData,
+    ...overrides,
+  });
+};
+
+export const createMockUser = (overrides?: Partial<User>): User => {
+  const mockUserData = {
+    id: randomDataGenerator.integer({ min: 1, max: 1000 }),
+    userId: randomDataGenerator.guid(),
+    name: randomDataGenerator.first(),
+    lastname: randomDataGenerator.last(),
+    email: randomDataGenerator.email(),
+    username: randomDataGenerator.name(),
+    uuid: randomDataGenerator.guid(),
+    avatar: randomDataGenerator.avatar(),
+    createdAt: randomDataGenerator.date(),
+    updatedAt: randomDataGenerator.date(),
+  };
+  return new User({
+    ...mockUserData,
+    ...overrides,
+  });
+};
