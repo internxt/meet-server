@@ -13,13 +13,14 @@ import { CallUseCase } from './call.usecase';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
 import { createMockUserToken, mockUserPayload } from './fixtures';
+import { v4 } from 'uuid';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
   let callUseCase: DeepMocked<CallUseCase>;
   let roomService: DeepMocked<RoomService>;
 
-  const mockRoomId = 'test-room-id';
+  const mockRoomId = v4();
   const mockJoinCallDto: JoinCallDto = {
     name: 'Test User',
     lastName: 'Smith',
@@ -265,6 +266,14 @@ describe('Testing Call Endpoints', () => {
         anonymous: false,
       });
       expect(result).toEqual(mockJoinCallResponse);
+    });
+
+    it('When joining a call with invalid room name (not UUID), then it should throw', async () => {
+      callUseCase.joinCall.mockResolvedValue(mockJoinCallResponse);
+
+      await expect(
+        callController.joinCall('invalid room name', null, mockJoinCallDto),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
