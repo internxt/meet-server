@@ -12,7 +12,7 @@ import {
 import { RoomModel } from './room.model';
 
 interface RoomUserModelAttributes {
-  id: number;
+  id: string;
   roomId: string;
   userId: string;
   name?: string;
@@ -26,14 +26,17 @@ interface RoomUserModelAttributes {
   tableName: 'room_users',
   underscored: true,
 })
-export class RoomUserModel extends Model implements RoomUserModelAttributes {
+export class RoomUserModel
+  extends Model<RoomUserModel>
+  implements RoomUserModelAttributes
+{
   @PrimaryKey
   @Column({
-    type: DataType.BIGINT,
-    autoIncrement: true,
+    type: DataType.UUID,
     primaryKey: true,
+    defaultValue: DataType.UUIDV4,
   })
-  id: number;
+  id: string;
 
   @ForeignKey(() => RoomModel)
   @Column({
