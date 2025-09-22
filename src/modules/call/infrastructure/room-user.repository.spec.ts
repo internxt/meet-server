@@ -4,13 +4,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RoomUser } from '../domain/room-user.domain';
 import { RoomUserModel } from '../models/room-user.model';
 import { SequelizeRoomUserRepository } from './room-user.repository';
+import { v4 } from 'uuid';
 
 describe('SequelizeRoomUserRepository', () => {
   let repository: SequelizeRoomUserRepository;
   let roomUserModel: DeepMocked<typeof RoomUserModel>;
 
   const mockRoomUserData = {
-    id: 1,
+    id: v4(),
     roomId: 'test-room-id',
     userId: 'test-user-id',
     name: 'Test User',
@@ -139,7 +140,7 @@ describe('SequelizeRoomUserRepository', () => {
         createMock<RoomUserModel>(mockRoomUserData),
         createMock<RoomUserModel>({
           ...mockRoomUserData,
-          id: 2,
+          id: v4(),
           userId: 'user-2',
         }),
       ];
