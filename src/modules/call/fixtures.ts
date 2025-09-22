@@ -4,6 +4,7 @@ import { Room } from './domain/room.domain';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { RoomUser, RoomUserAttributes } from './domain/room-user.domain';
 import { User } from '../../shared/user/user.domain';
+import { v4 } from 'uuid';
 
 const randomDataGenerator = new Chance();
 
@@ -65,7 +66,7 @@ export const createMockRoomUser = (
   overrides?: Partial<RoomUserAttributes>,
 ): RoomUser => {
   const mockRoomUserData: RoomUserAttributes = {
-    id: randomDataGenerator.integer({ min: 1, max: 1000 }),
+    id: v4(),
     roomId: randomDataGenerator.guid(),
     userId: randomDataGenerator.guid(),
     name: randomDataGenerator.first(),
