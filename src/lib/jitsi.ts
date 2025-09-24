@@ -13,18 +13,20 @@ export const getJitsiJWTPayload = (
     id: string;
     name: string;
     email: string;
+    userRoomId: string;
   },
   room: string,
   moderator: boolean,
 ) => {
   const now = Math.round(new Date().getTime() / 1000);
   const appId = configuration().jitsi.appId;
+  const userContextId = user.id + '/' + user.userRoomId;
 
   return {
     aud: 'jitsi',
     context: {
       user: {
-        id: user?.id ?? v4(),
+        id: userContextId,
         name: user?.name ?? 'anonymous',
         email: user?.email ?? 'anonymous@internxt.com',
         avatar: '',
@@ -53,4 +55,17 @@ export const getJitsiJWTHeader = () => {
     typ: 'JWT',
   };
   return header;
+};
+
+export const getJitsiAdminJWTPayload = () => {
+  const now = Math.round(new Date().getTime() / 1000);
+  const appId = configuration().jitsi.appId;
+
+  return {
+    aud: 'jitsi',
+    exp: now + 600, // 1 minute expiration
+    iss: 'chat',
+    admin: true, // Required for conference management endpoints
+    sub: appId,
+  };
 };

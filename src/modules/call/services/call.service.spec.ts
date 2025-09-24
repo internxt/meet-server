@@ -1,5 +1,6 @@
 import { createMock } from '@golevelup/ts-jest';
 import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as jwt from 'jsonwebtoken';
 import * as uuid from 'uuid';
@@ -26,6 +27,7 @@ jest.mock('../../../config/configuration', () => {
 describe('Call service', () => {
   let callService: CallService;
   let paymentService: PaymentService;
+  let configService: ConfigService;
   let moduleRef: TestingModule;
 
   beforeEach(async () => {
@@ -37,9 +39,12 @@ describe('Call service', () => {
 
     callService = moduleRef.get<CallService>(CallService);
     paymentService = moduleRef.get<PaymentService>(PaymentService);
+    configService = moduleRef.get<ConfigService>(ConfigService);
+
+    jest.spyOn(configService, 'get').mockReturnValue('jitsi-app-id');
   });
 
-  it('When the user has meet enabled, then a call token should be created', async () => {
+  it('When the user has meet enabled, then a call should be created', async () => {
     const userPayload = mockUserPayload;
     jest.spyOn(paymentService, 'getUserTier').mockResolvedValue({
       featuresPerService: {
@@ -53,11 +58,10 @@ describe('Call service', () => {
     (uuid.v4 as jest.Mock).mockReturnValue('test-room-id');
     (jwt.sign as jest.Mock).mockReturnValue('test-jitsi-token');
 
-    const result = await callService.createCallToken(userPayload);
+    const result = await callService.createCall(userPayload);
 
     expect(result).toEqual({
       appId: 'jitsi-app-id',
-      token: 'test-jitsi-token',
       room: 'test-room-id',
       paxPerCall: 10,
     });
@@ -76,84 +80,11 @@ describe('Call service', () => {
       },
     } as Tier);
 
-    await expect(callService.createCallToken(userPayload)).rejects.toThrow(
+    await expect(callService.createCall(userPayload)).rejects.toThrow(
       UnauthorizedException,
     );
 
     expect(paymentService.getUserTier).toHaveBeenCalledWith(userPayload.uuid);
   });
 
-  describe('createCallTokenForParticipant', () => {
-    it('should create a token for a registered user (non-moderator)', () => {
-      const userPayload = mockUserPayload;
-      const userId = userPayload.uuid;
-      const roomId = 'test-room-id';
-      const isAnonymous = false;
-      const isModerator = false;
-      const expectedToken = 'test-participant-token';
-
-      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
-
-      const result = callService.createCallTokenForParticipant(
-        userId,
-        roomId,
-        isAnonymous,
-        isModerator,
-        userPayload,
-      );
-
-      expect(result).toStrictEqual({
-        appId: 'jitsi-app-id',
-        token: expectedToken,
-      });
-      expect(jwt.sign).toHaveBeenCalled();
-    });
-
-    it('should create a token for an anonymous user (non-moderator)', () => {
-      const userId = 'anonymous-user-id';
-      const roomId = 'test-room-id';
-      const isAnonymous = true;
-      const isModerator = false;
-      const expectedToken = 'test-anonymous-token';
-
-      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
-
-      const result = callService.createCallTokenForParticipant(
-        userId,
-        roomId,
-        isAnonymous,
-        isModerator,
-      );
-
-      expect(result).toStrictEqual({
-        appId: 'jitsi-app-id',
-        token: expectedToken,
-      });
-      expect(jwt.sign).toHaveBeenCalled();
-    });
-
-    it('should create a token for a moderator user', () => {
-      const userId = 'moderator-user-id';
-      const roomId = 'test-room-id';
-      const isAnonymous = false;
-      const isModerator = true;
-      const expectedToken = 'test-moderator-token';
-
-      (jwt.sign as jest.Mock).mockReturnValue(expectedToken);
-
-      const result = callService.createCallTokenForParticipant(
-        userId,
-        roomId,
-        isAnonymous,
-        isModerator,
-        mockUserPayload,
-      );
-
-      expect(result).toStrictEqual({
-        appId: 'jitsi-app-id',
-        token: expectedToken,
-      });
-      expect(jwt.sign).toHaveBeenCalled();
-    });
-  });
 });

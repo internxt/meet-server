@@ -83,6 +83,10 @@ export class RoomService {
     await this.roomUserRepository.deleteByUserIdAndRoomId(userId, room.id);
   }
 
+  async deleteRoomUser(roomUserId: string): Promise<void> {
+    await this.roomUserRepository.delete(roomUserId);
+  }
+
   private async getUsersByRoomUsers(roomUsers: RoomUser[]): Promise<User[]> {
     return this.userRepository.findManyByUuid(
       roomUsers.map((roomUser) => roomUser.userId),

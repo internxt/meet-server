@@ -49,7 +49,6 @@ export const createMockRoom = (overrides?: Partial<Room>): Room => ({
 });
 
 export const mockCallResponse: CreateCallResponseDto = {
-  token: randomDataGenerator.string({ length: 32 }),
   room: mockRoomData.id,
   paxPerCall: mockRoomData.maxUsersAllowed,
   appId: 'testAppId',

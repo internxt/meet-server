@@ -81,7 +81,7 @@ describe('JitsiWebhookService', () => {
           moderator: 'false',
           name: 'Test User',
           disconnectReason: 'left',
-          id: 'test-participant-id',
+          id: 'test-participant-id/room-user-id',
           participantJid: 'test-jid',
           participantId: 'test-participant-id',
         },
@@ -89,9 +89,8 @@ describe('JitsiWebhookService', () => {
 
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        'test-participant-id',
-        minimalRoom,
+      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(
+        'room-user-id',
       );
     });
 
@@ -119,7 +118,7 @@ describe('JitsiWebhookService', () => {
           moderator: 'false',
           name: 'Test User',
           disconnectReason: 'left',
-          id: 'test-participant-id',
+          id: 'test-participant-id/room-user-id',
           participantJid: 'test-jid',
           participantId: 'test-participant-id',
         },
@@ -129,9 +128,8 @@ describe('JitsiWebhookService', () => {
 
       expect(roomService.closeRoom).toHaveBeenCalledWith('test-room-id');
 
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        'test-participant-id',
-        ownerRoom,
+      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(
+        'room-user-id',
       );
     });
 
@@ -159,7 +157,7 @@ describe('JitsiWebhookService', () => {
           moderator: 'false',
           name: 'Test User',
           disconnectReason: 'left',
-          id: 'test-participant-id',
+          id: 'test-participant-id/room-user-id',
           participantJid: 'test-jid',
           participantId: 'test-participant-id',
         },
@@ -169,9 +167,8 @@ describe('JitsiWebhookService', () => {
 
       expect(roomService.closeRoom).not.toHaveBeenCalled();
 
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        'test-participant-id',
-        ownerRoom,
+      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(
+        'room-user-id',
       );
     });
 
@@ -188,7 +185,7 @@ describe('JitsiWebhookService', () => {
           moderator: 'false',
           name: 'Test User',
           disconnectReason: 'left',
-          id: 'test-participant-id',
+          id: 'test-participant-id/room-user-id',
           participantJid: 'test-jid',
           participantId: 'test-participant-id',
         },
@@ -196,10 +193,10 @@ describe('JitsiWebhookService', () => {
 
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
+      expect(roomService.deleteRoomUser).not.toHaveBeenCalled();
     });
 
-    it('When participant ID is missing, then it should skip processing', async () => {
+    it('When participant ID is empty, then it should process with undefined roomUserId', async () => {
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
         customerId: 'customer-id',
@@ -220,7 +217,7 @@ describe('JitsiWebhookService', () => {
 
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
+      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(undefined);
     });
   });
 
