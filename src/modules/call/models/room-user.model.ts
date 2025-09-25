@@ -15,6 +15,8 @@ interface RoomUserModelAttributes {
   id: string;
   roomId: string;
   userId: string;
+  participantId?: string;
+  joinedAt?: Date;
   name?: string;
   lastName?: string;
   anonymous: boolean;
@@ -62,6 +64,16 @@ export class RoomUserModel
     type: DataType.STRING,
   })
   lastName?: string;
+
+  @Column({
+    type: DataType.STRING,
+  })
+  participantId?: string;
+
+  @Column({
+    type: DataType.DATE,
+  })
+  joinedAt?: Date;
 
   @Column({
     type: DataType.BOOLEAN,

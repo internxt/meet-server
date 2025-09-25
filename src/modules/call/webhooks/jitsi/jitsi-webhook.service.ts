@@ -1,19 +1,151 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Sequelize } from 'sequelize-typescript';
 import * as crypto from 'crypto';
 import { RoomService } from '../../services/room.service';
-import { JitsiWebhookPayload } from './interfaces/JitsiGenericWebHookPayload';
+import { SequelizeRoomUserRepository } from '../../infrastructure/room-user.repository';
+import {
+  JitsiWebhookPayload,
+  JitsiParticipantJoinedWebHookPayload,
+} from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
+import { CallService } from '../../services/call.service';
 @Injectable()
 export class JitsiWebhookService {
   private readonly logger = new Logger(JitsiWebhookService.name);
   private readonly webhookSecret: string | undefined;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly callService: CallService,
+
     private readonly roomService: RoomService,
+    private readonly roomUserRepository: SequelizeRoomUserRepository,
+    private readonly sequelize: Sequelize,
+    private readonly configService: ConfigService,
   ) {
     this.webhookSecret = this.configService.get<string>('jitsiWebhook.secret');
+  }
+
+  /**
+   * Handles the PARTICIPANT_JOINED event from Jitsi
+   * @param payload The webhook payload
+   * @returns A promise that resolves when the event is handled
+   */
+  async handleParticipantJoined(
+    payload: JitsiParticipantJoinedWebHookPayload,
+  ): Promise<void> {
+    try {
+      this.logger.log(
+        {
+          payload,
+        },
+        'Handling PARTICIPANT_JOINED event',
+      );
+
+      const roomId = this.extractRoomId(payload.fqn);
+      if (!roomId) {
+        this.logger.warn(`Could not extract room ID from FQN: ${payload.fqn}`);
+        return;
+      }
+
+      const room = await this.roomService.getRoomByRoomId(roomId);
+      if (!room) {
+        this.logger.warn({ roomId }, 'Room not found');
+        return;
+      }
+
+      const [userId, roomUserId] = this.extractUserId(payload.data.id);
+      const newParticipantId = payload.data.participantId;
+      const webhookTimestamp = new Date(payload.timestamp);
+
+      if (!newParticipantId || !userId) {
+        this.logger.warn(
+          { participantId: newParticipantId, userId },
+          'Participant ID or user ID not found in payload',
+        );
+        return;
+      }
+
+      let participantToKick: string | undefined;
+
+      await this.sequelize.transaction(async (transaction) => {
+        const roomUser = await this.roomUserRepository.findById(roomUserId, {
+          transaction,
+          lock: true,
+        });
+
+        if (!roomUser) {
+          this.logger.warn({ roomUserId }, 'Room user not found for webhook');
+          return;
+        }
+
+        const isFirstConnection = !roomUser.joinedAt && !roomUser.participantId;
+
+        if (isFirstConnection) {
+          await this.roomUserRepository.update(
+            roomUserId,
+            {
+              participantId: newParticipantId,
+              joinedAt: webhookTimestamp,
+            },
+            transaction,
+          );
+          return;
+        }
+
+        if (webhookTimestamp > roomUser.joinedAt) {
+          if (roomUser?.participantId !== newParticipantId) {
+            participantToKick = roomUser.participantId;
+          }
+
+          await this.roomUserRepository.update(
+            roomUserId,
+            {
+              participantId: newParticipantId,
+              joinedAt: webhookTimestamp,
+            },
+            transaction,
+          );
+          return;
+        }
+
+        participantToKick = newParticipantId;
+        this.logger.warn(
+          {
+            roomUserId,
+            webhookTimestamp,
+            currentJoinedAt: roomUser.joinedAt,
+            obsoleteParticipantId: newParticipantId,
+          },
+          'Received obsolete participant joined webhook',
+        );
+      });
+
+      if (participantToKick) {
+        this.logger.log(
+          {
+            roomId,
+            participantToKick,
+          },
+          'Kicking participant due to webhook processing',
+        );
+        await this.callService.kickParticipant(roomId, participantToKick);
+      }
+
+      this.logger.log(
+        {
+          participantId: newParticipantId,
+          userId,
+          roomId,
+          webhookTimestamp,
+          roomUserId,
+        },
+        'Successfully processed PARTICIPANT_JOINED event',
+      );
+    } catch (error: unknown) {
+      this.logger.error({ error }, 'Error handling PARTICIPANT_JOINED event');
+      throw error;
+    }
   }
 
   /**
@@ -36,19 +168,28 @@ export class JitsiWebhookService {
       }
 
       const room = await this.roomService.getRoomByRoomId(roomId);
-
       if (!room) {
         this.logger.warn({ roomId }, 'Room not found');
         return;
       }
 
-      const isOwner = userId === room.hostId;
-      if (isOwner) await this.roomService.closeRoom(roomId);
+      const webhookTimestamp = new Date(payload.timestamp);
+      const deletedRows =
+        await this.roomUserRepository.deleteByParticipantAndTimestamp(
+          roomUserId,
+          payload.data.participantId,
+          webhookTimestamp,
+        );
 
-      await this.roomService.deleteRoomUser(roomUserId);
+      if (deletedRows > 0) {
+        const isOwner = userId === room.hostId;
+        if (isOwner) {
+          await this.roomService.closeRoom(roomId);
+        }
+      }
 
       this.logger.log(
-        { userId, roomId },
+        { userId, roomId, removedRoomUsers: deletedRows },
         'Successfully processed PARTICIPANT_LEFT event',
       );
     } catch (error: unknown) {

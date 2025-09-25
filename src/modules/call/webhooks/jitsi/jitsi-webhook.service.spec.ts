@@ -3,8 +3,11 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
+import { Sequelize } from 'sequelize-typescript';
 import { Room } from '../../domain/room.domain';
 import { RoomService } from '../../services/room.service';
+import { SequelizeRoomUserRepository } from '../../infrastructure/room-user.repository';
+import { CallService } from '../../services/call.service';
 import {
   JitsiGenericWebHookEvent,
   JitsiWebhookPayload,
@@ -30,6 +33,9 @@ describe('JitsiWebhookService', () => {
   let service: JitsiWebhookService;
   let roomService: DeepMocked<RoomService>;
   let configService: DeepMocked<ConfigService>;
+  let callService: DeepMocked<CallService>;
+  let roomUserRepository: DeepMocked<SequelizeRoomUserRepository>;
+  let sequelize: DeepMocked<Sequelize>;
 
   const minimalRoom = new Room({
     id: 'test-room-id',
@@ -48,12 +54,11 @@ describe('JitsiWebhookService', () => {
     service = module.get<JitsiWebhookService>(JitsiWebhookService);
     roomService = module.get<DeepMocked<RoomService>>(RoomService);
     configService = module.get<DeepMocked<ConfigService>>(ConfigService);
-
-    configService.get.mockImplementation((key, defaultValue) => {
-      if (key === 'jitsiWebhook.events.participantLeft') return true;
-      if (key === 'jitsiWebhook.secret') return undefined;
-      return defaultValue;
-    });
+    callService = module.get<DeepMocked<CallService>>(CallService);
+    roomUserRepository = module.get<DeepMocked<SequelizeRoomUserRepository>>(
+      SequelizeRoomUserRepository,
+    );
+    sequelize = module.get<DeepMocked<Sequelize>>(Sequelize);
   });
 
   afterEach(() => {
@@ -67,7 +72,7 @@ describe('JitsiWebhookService', () => {
   describe('handleParticipantLeft', () => {
     it('When participant leaves, then it should remove user from room', async () => {
       roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
-      roomService.removeUserFromRoom.mockResolvedValue(undefined);
+      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(1);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -89,8 +94,12 @@ describe('JitsiWebhookService', () => {
 
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(
+      expect(
+        roomUserRepository.deleteByParticipantAndTimestamp,
+      ).toHaveBeenCalledWith(
         'room-user-id',
+        'test-participant-id',
+        new Date(mockEvent.timestamp),
       );
     });
 
@@ -104,7 +113,7 @@ describe('JitsiWebhookService', () => {
 
       roomService.getRoomByRoomId.mockResolvedValue(ownerRoom);
       roomService.closeRoom.mockResolvedValue(undefined);
-      roomService.removeUserFromRoom.mockResolvedValue(undefined);
+      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(1);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -128,8 +137,12 @@ describe('JitsiWebhookService', () => {
 
       expect(roomService.closeRoom).toHaveBeenCalledWith('test-room-id');
 
-      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(
+      expect(
+        roomUserRepository.deleteByParticipantAndTimestamp,
+      ).toHaveBeenCalledWith(
         'room-user-id',
+        'test-participant-id',
+        new Date(mockEvent.timestamp),
       );
     });
 
@@ -143,7 +156,7 @@ describe('JitsiWebhookService', () => {
 
       roomService.getRoomByRoomId.mockResolvedValue(ownerRoom);
       roomService.closeRoom.mockResolvedValue(undefined);
-      roomService.removeUserFromRoom.mockResolvedValue(undefined);
+      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(1);
 
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
@@ -167,8 +180,12 @@ describe('JitsiWebhookService', () => {
 
       expect(roomService.closeRoom).not.toHaveBeenCalled();
 
-      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(
+      expect(
+        roomUserRepository.deleteByParticipantAndTimestamp,
+      ).toHaveBeenCalledWith(
         'room-user-id',
+        'test-participant-id',
+        new Date(mockEvent.timestamp),
       );
     });
 
@@ -193,10 +210,15 @@ describe('JitsiWebhookService', () => {
 
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.deleteRoomUser).not.toHaveBeenCalled();
+      expect(
+        roomUserRepository.deleteByParticipantAndTimestamp,
+      ).not.toHaveBeenCalled();
     });
 
     it('When participant ID is empty, then it should process with undefined roomUserId', async () => {
+      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
+      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(0);
+
       const mockEvent: JitsiParticipantLeftWebHookPayload = {
         idempotencyKey: 'test-key',
         customerId: 'customer-id',
@@ -217,7 +239,13 @@ describe('JitsiWebhookService', () => {
 
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.deleteRoomUser).toHaveBeenCalledWith(undefined);
+      expect(
+        roomUserRepository.deleteByParticipantAndTimestamp,
+      ).toHaveBeenCalledWith(
+        undefined,
+        'test-participant-id',
+        new Date(mockEvent.timestamp),
+      );
     });
   });
 
@@ -226,20 +254,32 @@ describe('JitsiWebhookService', () => {
       eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
     } as unknown as JitsiWebhookPayload;
 
-    it('When webhook secret is not configured, then it should skip validation', () => {
-      configService.get.mockImplementation((key, defaultValue) => {
+    it('When webhook secret is not configured, then it should skip validation', async () => {
+      // Create a new service instance with a properly mocked config
+      const testConfigService = createMock<ConfigService>();
+      testConfigService.get.mockImplementation((key) => {
         if (key === 'jitsiWebhook.secret') return undefined;
-        return defaultValue;
+        return undefined;
       });
 
-      // Create a new service instance with the updated config mock
-      const testService = new JitsiWebhookService(configService, roomService);
+      const testModule: TestingModule = await Test.createTestingModule({
+        providers: [
+          JitsiWebhookService,
+          {
+            provide: ConfigService,
+            useValue: testConfigService,
+          },
+        ],
+      })
+        .useMocker(createMock)
+        .compile();
 
+      const testService =
+        testModule.get<JitsiWebhookService>(JitsiWebhookService);
       const headers = { 'content-type': 'application/json' };
 
-      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
-        true,
-      );
+      const result = testService.validateWebhookRequest(headers, mockPayload);
+      expect(result).toBe(true);
     });
 
     it('When signature is missing, then it should fail validation', () => {
@@ -248,12 +288,9 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      const testService = new JitsiWebhookService(configService, roomService);
       const headers = { 'content-type': 'application/json' };
 
-      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
-        false,
-      );
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
     });
 
     it('When raw body is missing, then it should fail validation', () => {
@@ -262,15 +299,12 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      const testService = new JitsiWebhookService(configService, roomService);
       const headers = {
         'content-type': 'application/json',
         'x-jaas-signature': 'signature',
       };
 
-      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
-        false,
-      );
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
     });
 
     it('When signature is valid, then it should pass validation', () => {
@@ -280,7 +314,6 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      const testService = new JitsiWebhookService(configService, roomService);
       const signature =
         't=1757430085,v1=LnyXpAysJpOLDj6kZ43+QrzcqpXcPW/do7LlSCfhVVs=';
 
@@ -291,9 +324,7 @@ describe('JitsiWebhookService', () => {
 
       (crypto.timingSafeEqual as jest.Mock).mockReturnValue(true);
 
-      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
-        true,
-      );
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(true);
     });
 
     it('When signature is invalid, then it should fail validation', () => {
@@ -303,7 +334,6 @@ describe('JitsiWebhookService', () => {
         return defaultValue;
       });
 
-      const testService = new JitsiWebhookService(configService, roomService);
       const headers = {
         'content-type': 'application/json',
         'x-jaas-signature': 'invalid-signature',
@@ -311,9 +341,7 @@ describe('JitsiWebhookService', () => {
 
       (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
 
-      expect(testService.validateWebhookRequest(headers, mockPayload)).toBe(
-        false,
-      );
+      expect(service.validateWebhookRequest(headers, mockPayload)).toBe(false);
     });
   });
 });

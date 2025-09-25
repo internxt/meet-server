@@ -101,28 +101,35 @@ export class CallUseCase {
       throw new ForbiddenException('Room is closed');
     }
 
+    const currentUsersCount = await this.roomService.countUsersInRoom(room.id);
     const existentUserInRoom = await this.roomService.getUserInRoom(
       joiningUserData.userId,
       room.id,
     );
 
-    const currentUsersCount = await this.roomService.countUsersInRoom(room.id);
-
     const isRoomFull = currentUsersCount >= room.maxUsersAllowed;
-
     if (isRoomFull && !existentUserInRoom) {
       throw new BadRequestException('The room is full');
     }
 
-    const roomUser =
-      existentUserInRoom ??
-      (await this.roomService.createUserInRoom({
-        roomId: room.id,
-        userId: joiningUserData?.userId,
-        name: joiningUserData?.name,
-        lastName: joiningUserData?.lastName,
-        anonymous: Boolean(joiningUserData?.anonymous),
-      }));
+    const { roomUser, oldParticipantId } =
+      await this.roomService.handleUserJoined(joiningUserData.userId, room.id, {
+        name: joiningUserData.name,
+        lastName: joiningUserData.lastName,
+        anonymous: joiningUserData.anonymous,
+      });
+
+    if (oldParticipantId) {
+      this.logger.log(
+        {
+          roomId,
+          userId: joiningUserData.userId,
+          oldParticipantId,
+        },
+        'Kicking existing participant on new join',
+      );
+      await this.callService.kickParticipant(roomId, oldParticipantId);
+    }
 
     const tokenData = this.callService.generateJitsiJWT(
       {

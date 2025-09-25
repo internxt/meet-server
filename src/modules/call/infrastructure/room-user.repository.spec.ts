@@ -57,7 +57,7 @@ describe('SequelizeRoomUserRepository', () => {
 
       const result = await repository.create(roomUserCreateData);
 
-      expect(createRoomUserSpy).toHaveBeenCalledWith(roomUserCreateData);
+      expect(createRoomUserSpy).toHaveBeenCalledWith(roomUserCreateData, { transaction: undefined });
       expect(result).toBeInstanceOf(RoomUser);
       expect(result.id).toEqual(mockRoomUserData.id);
       expect(result.roomId).toEqual(mockRoomUserData.roomId);
@@ -69,24 +69,33 @@ describe('SequelizeRoomUserRepository', () => {
       const mockRoomUser = createMock<RoomUserModel>(mockRoomUserData);
 
       const findRoomUserByIdSpy = jest
-        .spyOn(roomUserModel, 'findByPk')
+        .spyOn(roomUserModel, 'findOne')
         .mockResolvedValueOnce(mockRoomUser);
 
-      const result = await repository.findById(1);
+      const result = await repository.findById(mockRoomUserData.id);
 
-      expect(findRoomUserByIdSpy).toHaveBeenCalledWith(1);
+      expect(findRoomUserByIdSpy).toHaveBeenCalledWith({
+        where: { id: mockRoomUserData.id },
+        lock: undefined,
+        transaction: undefined,
+      });
       expect(result).toBeInstanceOf(RoomUser);
       expect(result?.id).toEqual(mockRoomUserData.id);
     });
 
     it('When the room user does not exist in the DB, then null is returned', async () => {
       const findRoomUserByIdSpy = jest
-        .spyOn(roomUserModel, 'findByPk')
+        .spyOn(roomUserModel, 'findOne')
         .mockResolvedValueOnce(null);
 
-      const result = await repository.findById(999);
+      const nonExistentId = v4();
+      const result = await repository.findById(nonExistentId);
 
-      expect(findRoomUserByIdSpy).toHaveBeenCalledWith(999);
+      expect(findRoomUserByIdSpy).toHaveBeenCalledWith({
+        where: { id: nonExistentId },
+        lock: undefined,
+        transaction: undefined,
+      });
       expect(result).toBeNull();
     });
   });
@@ -180,11 +189,11 @@ describe('SequelizeRoomUserRepository', () => {
         .spyOn(roomUserModel, 'update')
         .mockResolvedValueOnce([1]);
 
-      await repository.update(1, { name: 'Updated Name' });
+      await repository.update(mockRoomUserData.id, { name: 'Updated Name' });
 
       expect(updateRoomUserSpy).toHaveBeenCalledWith(
         { name: 'Updated Name' },
-        { where: { id: 1 } },
+        { where: { id: mockRoomUserData.id } },
       );
     });
   });
