@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Sequelize } from 'sequelize-typescript';
 import { SequelizeRoomRepository } from '../infrastructure/room.repository';
 import { SequelizeRoomUserRepository } from '../infrastructure/room-user.repository';
 import { Room, RoomAttributes } from '../domain/room.domain';
@@ -15,6 +16,7 @@ export class RoomService {
     private readonly roomUserRepository: SequelizeRoomUserRepository,
     private readonly userRepository: UserRepository,
     private readonly avatarService: AvatarService,
+    private readonly sequelize: Sequelize,
   ) {}
 
   async createRoom(data: Room) {
@@ -115,5 +117,63 @@ export class RoomService {
     );
 
     return existingUser;
+  }
+
+  async updateRoomUser(
+    roomUserId: string,
+    data: Partial<RoomUserAttributes>,
+  ): Promise<void> {
+    await this.roomUserRepository.update(roomUserId, data);
+  }
+
+  async handleUserJoined(
+    userId: string,
+    roomId: string,
+    userData: {
+      name?: string;
+      lastName?: string;
+      anonymous?: boolean;
+    },
+  ): Promise<{ roomUser: RoomUser; oldParticipantId?: string }> {
+    let oldParticipantId: string | undefined;
+    let roomUser: RoomUser;
+
+    await this.sequelize.transaction(async (transaction) => {
+      const existingUser = await this.roomUserRepository.findByUserIdAndRoomId(
+        userId,
+        roomId,
+        { transaction, lock: true },
+      );
+
+      if (existingUser) {
+        if (existingUser.participantId) {
+          oldParticipantId = existingUser.participantId;
+        }
+
+        await this.roomUserRepository.update(
+          existingUser.id,
+          {
+            participantId: null,
+            joinedAt: null,
+          },
+          transaction,
+        );
+
+        roomUser = existingUser;
+      } else {
+        roomUser = await this.roomUserRepository.create(
+          {
+            roomId,
+            userId,
+            name: userData.name,
+            lastName: userData.lastName,
+            anonymous: Boolean(userData.anonymous),
+          },
+          transaction,
+        );
+      }
+    });
+
+    return { roomUser, oldParticipantId };
   }
 }

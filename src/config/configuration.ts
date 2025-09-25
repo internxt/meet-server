@@ -16,6 +16,7 @@ export default () => ({
   jitsi: {
     appId: process.env.JITSI_APP_ID,
     apiKey: process.env.JITSI_API_KEY,
+    apiUrl: process.env.JITSI_API_URL || 'https://8x8.vc',
   },
   jitsiWebhook: {
     secret: process.env.JITSI_WEBHOOK_SECRET,

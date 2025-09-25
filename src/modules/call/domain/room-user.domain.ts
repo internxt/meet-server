@@ -2,6 +2,8 @@ export interface RoomUserAttributes {
   id: string;
   roomId: string;
   userId: string;
+  participantId?: string;
+  joinedAt?: Date;
   name?: string;
   lastName?: string;
   anonymous: boolean;
@@ -13,6 +15,8 @@ export class RoomUser implements RoomUserAttributes {
   id: string;
   roomId: string;
   userId: string;
+  participantId?: string;
+  joinedAt?: Date;
   name?: string;
   lastName?: string;
   anonymous: boolean;
@@ -28,6 +32,8 @@ export class RoomUser implements RoomUserAttributes {
       id: this.id,
       roomId: this.roomId,
       userId: this.userId,
+      participantId: this.participantId,
+      joinedAt: this.joinedAt,
       name: this.name,
       lastName: this.lastName,
       anonymous: this.anonymous,
@@ -41,6 +47,8 @@ export class RoomUser implements RoomUserAttributes {
       id: attributes.id,
       roomId: attributes.roomId,
       userId: attributes.userId,
+      participantId: attributes.participantId,
+      joinedAt: attributes.joinedAt,
       name: attributes.name,
       lastName: attributes.lastName,
       anonymous: attributes.anonymous,

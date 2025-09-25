@@ -11,6 +11,7 @@ import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   JitsiGenericWebHookEvent,
   JitsiWebhookPayload,
+  JitsiParticipantJoinedWebHookPayload,
 } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { JitsiWebhookService } from './jitsi-webhook.service';
@@ -25,8 +26,7 @@ export class JitsiWebhookController {
   @Post()
   @ApiOperation({
     summary: 'Handle Jitsi webhook events',
-    description:
-      'Endpoint for receiving and processing Jitsi webhook events, specifically PARTICIPANT_LEFT events',
+    description: 'Endpoint for receiving and processing Jitsi webhook events',
   })
   @ApiBody({
     description: 'Webhook event payload from Jitsi',
@@ -62,6 +62,12 @@ export class JitsiWebhookController {
 
     try {
       switch (payload.eventType) {
+        case JitsiGenericWebHookEvent.PARTICIPANT_JOINED:
+          await this.jitsiWebhookService.handleParticipantJoined(
+            payload as JitsiParticipantJoinedWebHookPayload,
+          );
+          break;
+
         case JitsiGenericWebHookEvent.PARTICIPANT_LEFT:
           await this.jitsiWebhookService.handleParticipantLeft(
             payload as JitsiParticipantLeftWebHookPayload,
