@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import jwt, { JwtHeader } from 'jsonwebtoken';
 import { v4 } from 'uuid';
-import configuration from '../../../config/configuration';
 import { PaymentService, Tier } from '../../../externals/payments.service';
 import {
   getJitsiJWTHeader,
@@ -14,8 +13,8 @@ import {
   getJitsiJWTSecret,
 } from '../../../lib/jitsi';
 import { UserTokenData } from '../../auth/dto/user.dto';
-import { UserDataForToken } from '../../../shared/user/user.attributes';
 import { User } from '../../../shared/user/user.domain';
+import { ConfigService } from '@nestjs/config';
 
 export function SignWithRS256AndHeader(
   payload: object,
@@ -25,27 +24,12 @@ export function SignWithRS256AndHeader(
   return jwt.sign(payload, secret, { algorithm: 'RS256', header });
 }
 
-export function generateJitsiJWT(
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  },
-  room: string,
-  moderator: boolean,
-) {
-  return SignWithRS256AndHeader(
-    getJitsiJWTPayload(user, room, moderator),
-    getJitsiJWTSecret(),
-    getJitsiJWTHeader(),
-  );
-}
-
 @Injectable()
 export class CallService {
   constructor(
     @Inject(PaymentService)
     private readonly paymentService: PaymentService,
+    private readonly configService: ConfigService,
   ) {}
 
   private async getMeetFeatureConfigForUser(
@@ -66,7 +50,7 @@ export class CallService {
     return meetFeature;
   }
 
-  async createCallToken(user: User | UserTokenData['payload']) {
+  async createCall(user: User | UserTokenData['payload']) {
     const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
 
     if (!meetFeatures.enabled)
@@ -75,44 +59,28 @@ export class CallService {
       );
 
     const newRoomId = v4();
-    const token = generateJitsiJWT(
-      {
-        id: user.uuid,
-        email: user.email,
-        name: `${user.name} ${user.lastname}`,
-      },
-      newRoomId,
-      true,
-    );
 
     return {
-      token,
       room: newRoomId,
       paxPerCall: meetFeatures.paxPerCall,
-      appId: configuration().jitsi.appId,
+      appId: this.configService.get<string>('jitsi.appId'),
     };
   }
 
-  createCallTokenForParticipant(
-    userId: string,
-    roomId: string,
-    isAnonymous: boolean,
-    isModerator: boolean,
-    user?: UserDataForToken,
+  generateJitsiJWT(
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      userRoomId: string;
+    },
+    room: string,
+    moderator: boolean,
   ) {
-    const token = generateJitsiJWT(
-      {
-        id: userId,
-        email: isAnonymous ? 'anonymous@inxt.com' : user.email,
-        name: isAnonymous ? 'Anonymous' : `${user.name} ${user?.lastName}`,
-      },
-      roomId,
-      isModerator,
+    return SignWithRS256AndHeader(
+      getJitsiJWTPayload(user, room, moderator),
+      getJitsiJWTSecret(),
+      getJitsiJWTHeader(),
     );
-
-    return {
-      token,
-      appId: configuration().jitsi.appId,
-    };
   }
 }

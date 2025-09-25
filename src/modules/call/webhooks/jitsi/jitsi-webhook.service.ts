@@ -25,22 +25,13 @@ export class JitsiWebhookService {
     payload: JitsiParticipantLeftWebHookPayload,
   ): Promise<void> {
     try {
-      this.logger.log(
-        { idempotencyKey: payload.idempotencyKey },
-        'Handling PARTICIPANT_LEFT event',
-      );
+      this.logger.log({ payload }, 'Handling PARTICIPANT_LEFT event');
 
       const roomId = this.extractRoomId(payload.fqn);
+      const [userId, roomUserId] = this.extractUserId(payload.data.id);
 
       if (!roomId) {
         this.logger.warn(`Could not extract room ID from FQN: ${payload.fqn}`);
-        return;
-      }
-
-      const participantId = payload.data.id;
-
-      if (!participantId) {
-        this.logger.warn('Participant ID not found in payload');
         return;
       }
 
@@ -51,13 +42,13 @@ export class JitsiWebhookService {
         return;
       }
 
-      const isOwner = participantId === room.hostId;
+      const isOwner = userId === room.hostId;
       if (isOwner) await this.roomService.closeRoom(roomId);
 
-      await this.roomService.removeUserFromRoom(participantId, room);
+      await this.roomService.deleteRoomUser(roomUserId);
 
       this.logger.log(
-        { participantId, roomId },
+        { userId, roomId },
         'Successfully processed PARTICIPANT_LEFT event',
       );
     } catch (error: unknown) {
@@ -144,5 +135,11 @@ export class JitsiWebhookService {
       this.logger.error('Error validating webhook signature', error);
       return false;
     }
+  }
+
+  private extractUserId(contextUserId: string): [string, string] {
+    const [userId, roomUserId] = contextUserId.split('/');
+
+    return [userId, roomUserId];
   }
 }

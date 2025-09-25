@@ -194,11 +194,11 @@ describe('SequelizeRoomUserRepository', () => {
       const deleteRoomUserSpy = jest
         .spyOn(roomUserModel, 'destroy')
         .mockResolvedValueOnce(1);
-
-      await repository.delete(1);
+      const roomUserId = v4();
+      await repository.delete(roomUserId);
 
       expect(deleteRoomUserSpy).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: roomUserId },
       });
     });
   });

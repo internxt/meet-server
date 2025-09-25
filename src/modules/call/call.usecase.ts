@@ -14,6 +14,7 @@ import { User } from '../../shared/user/user.domain';
 import { CallService } from './services/call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallResponseDto } from './dto/join-call.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CallUseCase {
@@ -22,6 +23,7 @@ export class CallUseCase {
   constructor(
     private readonly callService: CallService,
     private readonly roomService: RoomService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createCallAndRoom(
@@ -40,7 +42,7 @@ export class CallUseCase {
 
     await this.validateUserHasNoActiveRoom(user.uuid, user.email);
 
-    const call = await this.callService.createCallToken(user);
+    const call = await this.callService.createCall(user);
 
     const newRoom = new Room({
       id: call.room,
@@ -122,13 +124,19 @@ export class CallUseCase {
         anonymous: Boolean(joiningUserData?.anonymous),
       }));
 
-    // Generate token for the user
-    const tokenData = this.callService.createCallTokenForParticipant(
-      roomUser.userId,
+    const tokenData = this.callService.generateJitsiJWT(
+      {
+        id: joiningUserData.userId,
+        userRoomId: roomUser.id,
+        email: roomUser.anonymous
+          ? 'anonymous@inxt.com'
+          : joiningUserData.email,
+        name: roomUser.anonymous
+          ? 'Anonymous'
+          : `${joiningUserData.name} ${joiningUserData?.lastName}`,
+      },
       roomId,
-      !!roomUser.anonymous,
       isOwner,
-      joiningUserData,
     );
 
     if (joiningUserData.userId === room.hostId && room.isClosed) {
@@ -136,10 +144,10 @@ export class CallUseCase {
     }
 
     return {
-      token: tokenData.token,
+      token: tokenData,
       room: roomId,
       userId: roomUser.userId,
-      appId: tokenData.appId,
+      appId: this.configService.get<string>('jitsi.appId'),
     };
   }
 

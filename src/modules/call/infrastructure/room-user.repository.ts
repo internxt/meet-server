@@ -46,7 +46,7 @@ export class SequelizeRoomUserRepository {
     await this.roomUserModel.update(data, { where: { id } });
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.roomUserModel.destroy({ where: { id } });
   }
 
