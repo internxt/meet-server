@@ -188,6 +188,11 @@ export class JitsiWebhookService {
         }
       }
 
+      const remainingUsers = await this.roomService.countUsersInRoom(roomId);
+      if (remainingUsers === 0) {
+        await this.roomService.removeRoom(roomId);
+      }
+
       this.logger.log(
         { userId, roomId, removedRoomUsers: deletedRows },
         'Successfully processed PARTICIPANT_LEFT event',
