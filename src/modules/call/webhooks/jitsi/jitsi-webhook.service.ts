@@ -190,6 +190,7 @@ export class JitsiWebhookService {
 
       const remainingUsers = await this.roomService.countUsersInRoom(roomId);
       if (remainingUsers === 0) {
+        this.logger.log({ roomId, userId }, 'Room empty, removing room');
         await this.roomService.removeRoom(roomId);
       }
 
