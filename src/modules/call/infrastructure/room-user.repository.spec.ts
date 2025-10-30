@@ -57,7 +57,9 @@ describe('SequelizeRoomUserRepository', () => {
 
       const result = await repository.create(roomUserCreateData);
 
-      expect(createRoomUserSpy).toHaveBeenCalledWith(roomUserCreateData, { transaction: undefined });
+      expect(createRoomUserSpy).toHaveBeenCalledWith(roomUserCreateData, {
+        transaction: undefined,
+      });
       expect(result).toBeInstanceOf(RoomUser);
       expect(result.id).toEqual(mockRoomUserData.id);
       expect(result.roomId).toEqual(mockRoomUserData.roomId);

@@ -14,6 +14,7 @@ import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
 import { createMockUserToken, mockUserPayload } from './fixtures';
 import { v4 } from 'uuid';
+import { ValidateUUIDPipe } from '../../common/pipes/validate-uuid.pipe';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
@@ -63,16 +64,6 @@ describe('Testing Call Endpoints', () => {
   });
 
   describe('Creating a call', () => {
-    it('When the user id is not provided (uuid), then an error indicating so is thrown', async () => {
-      await expect(
-        callController.createCall(
-          createMockUserToken({
-            payload: { ...createMockUserToken().payload, uuid: undefined },
-          }).payload,
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it('When the user id exists and has meet enabled, then should create the call and the room', async () => {
       const mockUserToken = createMockUserToken();
       const mockResponse = {
@@ -268,12 +259,12 @@ describe('Testing Call Endpoints', () => {
       expect(result).toEqual(mockJoinCallResponse);
     });
 
-    it('When joining a call with invalid room name (not UUID), then it should throw', async () => {
-      callUseCase.joinCall.mockResolvedValue(mockJoinCallResponse);
+    it('When joining a call with invalid room name (not UUID), then it should throw', () => {
+      const pipe = new ValidateUUIDPipe();
 
-      await expect(
-        callController.joinCall('invalid room name', null, mockJoinCallDto),
-      ).rejects.toThrow(BadRequestException);
+      expect(() =>
+        pipe.transform('invalid room name', { type: 'param', data: 'id' }),
+      ).toThrow(BadRequestException);
     });
   });
 

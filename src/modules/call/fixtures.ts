@@ -40,6 +40,7 @@ export const mockRoomData = {
   isClosed: false,
   createdAt: randomDataGenerator.date(),
   updatedAt: randomDataGenerator.date(),
+  removeAt: undefined,
 };
 
 export const createMockRoom = (overrides?: Partial<Room>): Room => ({
