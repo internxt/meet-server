@@ -10,6 +10,7 @@ import {
 } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { CallService } from '../../services/call.service';
+import { Time } from '../../../../common/time';
 @Injectable()
 export class JitsiWebhookService {
   private readonly logger = new Logger(JitsiWebhookService.name);
@@ -34,14 +35,14 @@ export class JitsiWebhookService {
   async handleParticipantJoined(
     payload: JitsiParticipantJoinedWebHookPayload,
   ): Promise<void> {
-    try {
-      this.logger.log(
-        {
-          payload,
-        },
-        'Handling PARTICIPANT_JOINED event',
-      );
+    this.logger.log(
+      {
+        payload,
+      },
+      'Handling PARTICIPANT_JOINED event',
+    );
 
+    try {
       const roomId = this.extractRoomId(payload.fqn);
       if (!roomId) {
         this.logger.warn(`Could not extract room ID from FQN: ${payload.fqn}`);
@@ -51,6 +52,12 @@ export class JitsiWebhookService {
       const room = await this.roomService.getRoomByRoomId(roomId);
       if (!room) {
         this.logger.warn({ roomId }, 'Room not found');
+        return;
+      }
+
+      if (Time.isBefore(room.removeAt)) {
+        this.logger.warn({ room }, 'Room removed due to inactivity');
+        await this.roomService.removeRoom(room.id);
         return;
       }
 
@@ -110,6 +117,9 @@ export class JitsiWebhookService {
         }
 
         participantToKick = newParticipantId;
+
+        await this.roomService.setExpirationTime(room.id);
+
         this.logger.warn(
           {
             roomUserId,

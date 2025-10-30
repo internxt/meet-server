@@ -38,6 +38,13 @@ export class SequelizeRoomRepository {
     await this.roomModel.update(data, { where: { id } });
   }
 
+  async updateWhere(
+    where: Partial<RoomAttributes>,
+    data: Partial<RoomAttributes>,
+  ): Promise<void> {
+    await this.roomModel.update(data, { where });
+  }
+
   async delete(id: RoomAttributes['id']): Promise<void> {
     await this.roomModel.destroy({ where: { id } });
   }

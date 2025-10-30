@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   Column,
   CreatedAt,
   DataType,
@@ -13,6 +14,7 @@ interface RoomModelAttributes {
   maxUsersAllowed: number;
   hostId: string;
   isClosed: boolean;
+  removeAt?: Date;
 }
 
 @Table({ tableName: 'rooms', timestamps: true, underscored: true })
@@ -32,6 +34,10 @@ export class RoomModel extends Model<RoomModel> implements RoomModelAttributes {
 
   @Column(DataType.BOOLEAN)
   isClosed: boolean;
+
+  @AllowNull
+  @Column(DataType.DATE)
+  removeAt?: Date;
 
   @CreatedAt
   createdAt: Date;

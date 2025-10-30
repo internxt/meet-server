@@ -29,19 +29,6 @@ export class CallUseCase {
   async createCallAndRoom(
     user: User | UserTokenData['payload'],
   ): Promise<CreateCallResponseDto> {
-    const activeRoom = await this.roomService.getOpenRoomByHostId(user.uuid);
-
-    // TODO: Remove this check and look for a better way to handle this
-    if (activeRoom) {
-      this.logger.warn(
-        { userId: user.uuid, roomId: activeRoom.id },
-        `User already has an active room as host, closing previous room`,
-      );
-      await this.roomService.removeRoom(activeRoom.id);
-    }
-
-    await this.validateUserHasNoActiveRoom(user.uuid, user.email);
-
     const call = await this.callService.createCall(user);
 
     const newRoom = new Room({
@@ -131,7 +118,7 @@ export class CallUseCase {
       await this.callService.kickParticipant(roomId, oldParticipantId);
     }
 
-    const tokenData = this.callService.generateJitsiJWT(
+    const callTokenData = this.callService.generateJitsiJWT(
       {
         id: joiningUserData.userId,
         userRoomId: roomUser.id,
@@ -151,7 +138,7 @@ export class CallUseCase {
     }
 
     return {
-      token: tokenData,
+      token: callTokenData,
       room: roomId,
       userId: roomUser.userId,
       appId: this.configService.get<string>('jitsi.appId'),

@@ -33,7 +33,7 @@ import { CallUseCase } from './call.usecase';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
-import { isUUID } from 'class-validator';
+import { ValidateUUIDPipe } from '../../common/pipes/validate-uuid.pipe';
 
 @ApiTags('Call')
 @Controller('call')
@@ -115,14 +115,10 @@ export class CallController {
   @ApiConflictResponse({ description: 'User is already in this room' })
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   async joinCall(
-    @Param('id') roomId: string,
+    @Param('id', ValidateUUIDPipe) roomId: string,
     @User() user: UserTokenData['payload'],
     @Body() joinCallDto?: JoinCallDto,
   ): Promise<JoinCallResponseDto> {
-    if (!isUUID(roomId)) {
-      throw new BadRequestException('Room id is not valid');
-    }
-
     const { uuid, email } = user || {};
     const isUserAnonymous =
       !user || !!joinCallDto?.anonymousId || joinCallDto?.anonymous === true;

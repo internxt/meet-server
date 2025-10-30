@@ -3,6 +3,7 @@ export interface RoomAttributes {
   maxUsersAllowed: number;
   hostId: string;
   isClosed?: boolean;
+  removeAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -12,6 +13,7 @@ export class Room implements RoomAttributes {
   maxUsersAllowed: number;
   hostId: string;
   isClosed?: boolean;
+  removeAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -25,6 +27,7 @@ export class Room implements RoomAttributes {
       maxUsersAllowed: this.maxUsersAllowed,
       hostId: this.hostId,
       isClosed: this.isClosed,
+      removeAt: this.removeAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
@@ -36,6 +39,7 @@ export class Room implements RoomAttributes {
       maxUsersAllowed: attributes.maxUsersAllowed,
       hostId: attributes.hostId,
       isClosed: attributes.isClosed,
+      removeAt: attributes.removeAt,
       createdAt: attributes.createdAt,
       updatedAt: attributes.updatedAt,
     });
