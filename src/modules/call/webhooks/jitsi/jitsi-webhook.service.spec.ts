@@ -5,15 +5,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
 import { Sequelize } from 'sequelize-typescript';
 import { Room } from '../../domain/room.domain';
+import { RoomUser } from '../../domain/room-user.domain';
 import { RoomService } from '../../services/room.service';
 import { SequelizeRoomUserRepository } from '../../infrastructure/room-user.repository';
 import { CallService } from '../../services/call.service';
 import {
   JitsiGenericWebHookEvent,
+  JitsiParticipantJoinedWebHookPayload,
   JitsiWebhookPayload,
 } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { JitsiWebhookService } from './jitsi-webhook.service';
+import { v4 } from 'uuid';
+import { Time } from '../../../../common/time';
 
 jest.mock('crypto', () => {
   const originalModule = jest.requireActual<typeof import('crypto')>('crypto');
@@ -246,6 +250,95 @@ describe('JitsiWebhookService', () => {
         'test-participant-id',
         new Date(mockEvent.timestamp),
       );
+    });
+  });
+
+  describe('handleParticipantJoined', () => {
+    beforeEach(() => {
+      sequelize.transaction.mockImplementation((callback: any) => {
+        const mockTransaction = {};
+        return callback(mockTransaction);
+      });
+    });
+
+    it('When room has expired, then it should log warning and remove room', async () => {
+      const expiredDate = Time.now('2020-01-01');
+      const expiredRoom = new Room({
+        id: v4(),
+        maxUsersAllowed: 10,
+        hostId: v4(),
+        removeAt: expiredDate,
+      });
+
+      roomService.getRoomByRoomId.mockResolvedValue(expiredRoom);
+      roomService.removeRoom.mockResolvedValue(undefined);
+
+      const mockEvent: JitsiParticipantJoinedWebHookPayload = {
+        idempotencyKey: 'test-key',
+        customerId: 'customer-id',
+        appId: 'app-id',
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
+        sessionId: 'session-id',
+        timestamp: 1609459200000, // 2021-01-01
+        fqn: 'app-id/test-room-id',
+        data: {
+          moderator: 'false',
+          name: 'Test User',
+          id: 'test-user-id/room-user-id',
+          participantJid: 'test-jid',
+          participantId: 'test-participant-id',
+        },
+      };
+
+      await service.handleParticipantJoined(mockEvent);
+
+      expect(roomService.removeRoom).toHaveBeenCalledWith(expiredRoom.id);
+    });
+
+    it('When room has not expired, then it should continue normal processing', async () => {
+      const futureDate = new Date('2030-12-31');
+      const activeRoom = new Room({
+        id: v4(),
+        maxUsersAllowed: 10,
+        hostId: v4(),
+        removeAt: futureDate,
+      });
+
+      roomService.getRoomByRoomId.mockResolvedValue(activeRoom);
+
+      const mockRoomUser = new RoomUser({
+        id: v4(),
+        userId: v4(),
+        roomId: activeRoom.id,
+        participantId: undefined,
+        joinedAt: undefined,
+        anonymous: false,
+      });
+
+      roomUserRepository.findById.mockResolvedValue(mockRoomUser);
+      roomUserRepository.update.mockResolvedValue(undefined);
+
+      const mockEvent: JitsiParticipantJoinedWebHookPayload = {
+        idempotencyKey: 'test-key',
+        customerId: 'customer-id',
+        appId: 'app-id',
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
+        sessionId: 'session-id',
+        timestamp: 1609459200000, // 2021-01-01
+        fqn: 'app-id/test-room-id',
+        data: {
+          moderator: 'false',
+          name: 'Test User',
+          id: 'test-user-id/room-user-id',
+          participantJid: 'test-jid',
+          participantId: 'test-participant-id',
+        },
+      };
+
+      await service.handleParticipantJoined(mockEvent);
+
+      expect(roomService.removeRoom).not.toHaveBeenCalled();
+      expect(roomUserRepository.findById).toHaveBeenCalled();
     });
   });
 
