@@ -106,20 +106,6 @@ describe('Time', () => {
   });
 
   describe('isBefore', () => {
-    it('When date is before current time, then it should return true', () => {
-      const pastDate = Time.now('2020-01-01T00:00:00.000Z');
-      const result = Time.isBefore(pastDate);
-
-      expect(result).toBe(true);
-    });
-
-    it('When date is after current time, then it should return false', () => {
-      const futureDate = Time.now('2030-01-01T00:00:00.000Z');
-      const result = Time.isBefore(futureDate);
-
-      expect(result).toBe(false);
-    });
-
     it('When date is before provided current date, then it should return true', () => {
       const date = Time.now('2024-01-01T00:00:00.000Z');
       const currentDate = Time.now('2024-06-01T00:00:00.000Z');

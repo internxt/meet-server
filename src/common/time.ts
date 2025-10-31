@@ -26,8 +26,8 @@ export class Time {
     return date.add(amount, unit).toDate();
   }
 
-  public static isBefore(date: Date, currentDate?: Date): boolean {
+  public static isBefore(date: Date, currentDate: Date): boolean {
     const previousDate = dayjs(date).utc();
-    return previousDate.isBefore(dayjs(currentDate || Time.now()).utc());
+    return previousDate.isBefore(dayjs(currentDate).utc());
   }
 }
