@@ -76,7 +76,7 @@ export class CallUseCase {
 
     if (room.removeAt && Time.isBefore(room.removeAt, Time.now())) {
       await this.roomService.removeRoom(room.id);
-      throw new GoneException('Call is expired');
+      throw new GoneException('Room is expired');
     }
 
     const joiningUserData = {
