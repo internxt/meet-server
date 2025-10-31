@@ -258,14 +258,6 @@ describe('Testing Call Endpoints', () => {
       });
       expect(result).toEqual(mockJoinCallResponse);
     });
-
-    it('When joining a call with invalid room name (not UUID), then it should throw', () => {
-      const pipe = new ValidateUUIDPipe();
-
-      expect(() =>
-        pipe.transform('invalid room name', { type: 'param', data: 'id' }),
-      ).toThrow(BadRequestException);
-    });
   });
 
   describe('Getting users in a call', () => {

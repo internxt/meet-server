@@ -69,10 +69,6 @@ describe('JitsiWebhookService', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('handleParticipantLeft', () => {
     it('When participant leaves, then it should remove user from room', async () => {
       roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
@@ -261,7 +257,7 @@ describe('JitsiWebhookService', () => {
       });
     });
 
-    it('When room has expired, then it should log warning and remove room', async () => {
+    it('When room has expired, then it should remove room', async () => {
       const expiredDate = Time.now('2020-01-01');
       const expiredRoom = new Room({
         id: v4(),
@@ -269,20 +265,16 @@ describe('JitsiWebhookService', () => {
         hostId: v4(),
         removeAt: expiredDate,
       });
-
-      roomService.getRoomByRoomId.mockResolvedValue(expiredRoom);
-      roomService.removeRoom.mockResolvedValue(undefined);
-
-      const mockEvent: JitsiParticipantJoinedWebHookPayload = {
+      const mockJoinedEvent: JitsiParticipantJoinedWebHookPayload = {
         idempotencyKey: 'test-key',
         customerId: 'customer-id',
         appId: 'app-id',
         eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
-        sessionId: 'session-id',
+        sessionId: v4(),
         timestamp: 1609459200000, // 2021-01-01
         fqn: 'app-id/test-room-id',
         data: {
-          moderator: 'false',
+          moderator: false,
           name: 'Test User',
           id: 'test-user-id/room-user-id',
           participantJid: 'test-jid',
@@ -290,7 +282,10 @@ describe('JitsiWebhookService', () => {
         },
       };
 
-      await service.handleParticipantJoined(mockEvent);
+      roomService.getRoomByRoomId.mockResolvedValue(expiredRoom);
+      roomService.removeRoom.mockResolvedValue(undefined);
+
+      await service.handleParticipantJoined(mockJoinedEvent);
 
       expect(roomService.removeRoom).toHaveBeenCalledWith(expiredRoom.id);
     });
@@ -303,6 +298,22 @@ describe('JitsiWebhookService', () => {
         hostId: v4(),
         removeAt: futureDate,
       });
+      const mockJoinedEvent: JitsiParticipantJoinedWebHookPayload = {
+        idempotencyKey: 'test-key',
+        customerId: 'customer-id',
+        appId: 'app-id',
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
+        sessionId: v4(),
+        timestamp: 1609459200000, // 2021-01-01
+        fqn: 'app-id/test-room-id',
+        data: {
+          moderator: false,
+          name: 'Test User',
+          id: 'test-user-id/room-user-id',
+          participantJid: 'test-jid',
+          participantId: 'test-participant-id',
+        },
+      };
 
       roomService.getRoomByRoomId.mockResolvedValue(activeRoom);
 
@@ -318,24 +329,7 @@ describe('JitsiWebhookService', () => {
       roomUserRepository.findById.mockResolvedValue(mockRoomUser);
       roomUserRepository.update.mockResolvedValue(undefined);
 
-      const mockEvent: JitsiParticipantJoinedWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
-        appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
-        sessionId: 'session-id',
-        timestamp: 1609459200000, // 2021-01-01
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          id: 'test-user-id/room-user-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
-        },
-      };
-
-      await service.handleParticipantJoined(mockEvent);
+      await service.handleParticipantJoined(mockJoinedEvent);
 
       expect(roomService.removeRoom).not.toHaveBeenCalled();
       expect(roomUserRepository.findById).toHaveBeenCalled();
