@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  GoneException,
   Injectable,
   Logger,
   NotFoundException,
@@ -15,6 +16,7 @@ import { CallService } from './services/call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallResponseDto } from './dto/join-call.dto';
 import { ConfigService } from '@nestjs/config';
+import { Time } from '../../common/time';
 
 @Injectable()
 export class CallUseCase {
@@ -70,6 +72,11 @@ export class CallUseCase {
     const room = await this.roomService.getRoomByRoomId(roomId);
     if (!room) {
       throw new NotFoundException(`Specified room not found`);
+    }
+
+    if (room.removeAt && Time.isBefore(room.removeAt, Time.now())) {
+      await this.roomService.removeRoom(room.id);
+      throw new GoneException('Call is expired');
     }
 
     const joiningUserData = {

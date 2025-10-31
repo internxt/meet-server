@@ -92,7 +92,7 @@ export class JitsiWebhookService {
           room.removeAt = expirationTime;
         }
 
-        if (Time.isBefore(room.removeAt)) {
+        if (Time.isBefore(room.removeAt, Time.now())) {
           this.logger.warn({ room }, 'Room expired');
           await this.roomService.removeRoom(room.id);
           return;
