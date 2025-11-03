@@ -5,6 +5,11 @@ import { CreateCallResponseDto } from './dto/create-call.dto';
 import { RoomUser, RoomUserAttributes } from './domain/room-user.domain';
 import { User } from '../../shared/user/user.domain';
 import { v4 } from 'uuid';
+import {
+  JitsiParticipantJoinedWebHookPayload,
+  JitsiGenericWebHookEvent,
+} from './webhooks/jitsi/interfaces/JitsiGenericWebHookPayload';
+import { JitsiParticipantLeftWebHookPayload } from './webhooks/jitsi/interfaces/JitsiParticipantLeftData';
 
 const randomDataGenerator = new Chance();
 
@@ -43,11 +48,19 @@ export const mockRoomData = {
   removeAt: undefined,
 };
 
-export const createMockRoom = (overrides?: Partial<Room>): Room => ({
-  ...mockRoomData,
-  ...overrides,
-  toJSON: () => mockRoomData,
-});
+export const createMockRoom = (attributes?: Partial<Room>): Room => {
+  const mockRoom = new Room({
+    id: randomDataGenerator.guid(),
+    hostId: randomDataGenerator.guid(),
+    maxUsersAllowed: randomDataGenerator.integer({ min: 2, max: 10 }),
+    isClosed: false,
+    createdAt: randomDataGenerator.date(),
+    updatedAt: randomDataGenerator.date(),
+    removeAt: undefined,
+    ...attributes,
+  });
+  return mockRoom;
+};
 
 export const mockCallResponse: CreateCallResponseDto = {
   room: mockRoomData.id,
@@ -99,4 +112,45 @@ export const createMockUser = (overrides?: Partial<User>): User => {
     ...mockUserData,
     ...overrides,
   });
+};
+
+export const createMockJitsiWebhookEvent = ({
+  overrides,
+  participantId,
+  roomUserId,
+  roomId,
+  appId,
+  eventType,
+}: {
+  overrides?: Partial<
+    JitsiParticipantJoinedWebHookPayload | JitsiParticipantLeftWebHookPayload
+  >;
+  participantId?: string;
+  roomUserId?: string;
+  roomId?: string;
+  appId?: string;
+  eventType: JitsiGenericWebHookEvent;
+}): JitsiParticipantJoinedWebHookPayload => {
+  const mockParticipantId = participantId ?? randomDataGenerator.guid();
+  const mockRoomUserId = roomUserId ?? v4();
+  const mockAppId = appId ?? randomDataGenerator.word();
+  const mockRoomId = roomId ?? randomDataGenerator.guid();
+
+  return {
+    idempotencyKey: v4(),
+    customerId: randomDataGenerator.guid(),
+    appId: mockAppId,
+    eventType,
+    sessionId: v4(),
+    timestamp: Date.now(),
+    fqn: `${mockAppId}/${mockRoomId}`,
+    data: {
+      moderator: false,
+      name: randomDataGenerator.name(),
+      id: `${mockParticipantId}/${mockRoomUserId}`,
+      participantJid: randomDataGenerator.guid(),
+      participantId: mockParticipantId,
+    },
+    ...overrides,
+  };
 };

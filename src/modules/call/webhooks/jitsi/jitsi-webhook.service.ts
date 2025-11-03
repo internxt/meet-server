@@ -12,11 +12,11 @@ import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipan
 import { CallService } from '../../services/call.service';
 import { Time } from '../../../../common/time';
 import { SequelizeRoomRepository } from '../../infrastructure/room.repository';
+import { Room } from '../../domain/room.domain';
 @Injectable()
 export class JitsiWebhookService {
   private readonly logger = new Logger(JitsiWebhookService.name);
   private readonly webhookSecret: string | undefined;
-  private readonly ROOM_EXPIRATION_DAYS = 30;
 
   constructor(
     private readonly callService: CallService,
@@ -78,7 +78,7 @@ export class JitsiWebhookService {
 
         if (!hasExpirationTime) {
           const expirationTime = Time.dateWithTimeAdded(
-            this.ROOM_EXPIRATION_DAYS,
+            Room.getRoomExpirationDays(),
             'day',
           );
           await this.roomRepository.updateWhere(

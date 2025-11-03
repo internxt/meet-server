@@ -8,7 +8,6 @@ import { AvatarService } from '../../../externals/avatar/avatar.service';
 import { Room } from '../domain/room.domain';
 import { mockRoomData, createMockRoomUser, createMockUser } from '../fixtures';
 import { v4 } from 'uuid';
-import { Time } from '../../../common/time';
 
 describe('Room Service', () => {
   let roomService: RoomService;
@@ -155,33 +154,6 @@ describe('Room Service', () => {
       expect(roomRepository.update).toHaveBeenCalledWith(roomId, {
         isClosed: false,
       });
-    });
-  });
-
-  describe('setExpirationTime', () => {
-    const currentDate = new Date('2025-11-01T00:00:00.000Z');
-
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.setSystemTime(currentDate);
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('When called, then it should update room with expiration time 30 days from now', async () => {
-      const roomId = mockRoomData.id;
-
-      const expectedExpirationDate = Time.dateWithTimeAdded(30, 'day');
-      jest.spyOn(roomRepository, 'updateWhere').mockResolvedValueOnce();
-
-      await roomService.setExpirationTime(roomId);
-
-      expect(roomRepository.updateWhere).toHaveBeenCalledWith(
-        { removeAt: null, id: roomId },
-        { removeAt: expectedExpirationDate },
-      );
     });
   });
 

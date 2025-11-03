@@ -8,7 +8,6 @@ import { UsersInRoomDto } from '../dto/users-in-room.dto';
 import { UserRepository } from '../../../shared/user/user.repository';
 import { AvatarService } from '../../../externals/avatar/avatar.service';
 import { User } from '../../../shared/user/user.domain';
-import { Time } from '../../../common/time';
 
 @Injectable()
 export class RoomService {
@@ -51,12 +50,6 @@ export class RoomService {
     return this.roomRepository.delete(id);
   }
 
-  async setExpirationTime(id: string) {
-    return this.roomRepository.updateWhere(
-      { removeAt: null, id },
-      { removeAt: Time.dateWithTimeAdded(30, 'day') },
-    );
-  }
   async closeRoom(id: string) {
     return this.roomRepository.update(id, { isClosed: true });
   }

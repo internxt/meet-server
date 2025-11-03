@@ -1,3 +1,4 @@
+const ROOM_EXPIRATION_DAYS = 30;
 export interface RoomAttributes {
   id: string;
   maxUsersAllowed: number;
@@ -31,6 +32,9 @@ export class Room implements RoomAttributes {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
+  }
+  static getRoomExpirationDays() {
+    return ROOM_EXPIRATION_DAYS;
   }
 
   static build(attributes: RoomAttributes): Room {

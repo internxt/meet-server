@@ -14,7 +14,6 @@ import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
 import { createMockUserToken, mockUserPayload } from './fixtures';
 import { v4 } from 'uuid';
-import { ValidateUUIDPipe } from '../../common/pipes/validate-uuid.pipe';
 
 describe('Testing Call Endpoints', () => {
   let callController: CallController;
