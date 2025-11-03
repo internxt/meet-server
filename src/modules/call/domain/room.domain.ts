@@ -1,3 +1,5 @@
+import { Time } from '../../../common/time';
+
 const ROOM_EXPIRATION_DAYS = 30;
 export interface RoomAttributes {
   id: string;
@@ -35,6 +37,10 @@ export class Room implements RoomAttributes {
   }
   static getRoomExpirationDays() {
     return ROOM_EXPIRATION_DAYS;
+  }
+
+  isExpired() {
+    return Time.isBefore(this.removeAt, Time.now());
   }
 
   static build(attributes: RoomAttributes): Room {

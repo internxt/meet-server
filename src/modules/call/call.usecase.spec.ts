@@ -13,7 +13,7 @@ import { Room } from './domain/room.domain';
 import { RoomService } from './services/room.service';
 import { CallService } from './services/call.service';
 import { CallUseCase } from './call.usecase';
-import { mockRoomData, mockUserPayload } from './fixtures';
+import { createMockRoom, mockRoomData, mockUserPayload } from './fixtures';
 import { v4 } from 'uuid';
 import { Time } from '../../common/time';
 
@@ -527,6 +527,63 @@ describe('CallUseCase', () => {
           name,
           anonymous: true,
         }),
+      );
+    });
+  });
+
+  describe('getRoomMetadata', () => {
+    const roomId = 'test-room-id';
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('When room exists and is not expired, then it should return room data without hostId', async () => {
+      const validRoomMock = createMockRoom({
+        maxUsersAllowed: 10,
+        isClosed: false,
+      });
+
+      roomService.getRoomByRoomId.mockResolvedValueOnce(validRoomMock);
+
+      const result = await callUseCase.getRoomMetadata(roomId);
+
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+      expect(result).toEqual({
+        id: validRoomMock.id,
+        maxUsersAllowed: validRoomMock.maxUsersAllowed,
+        isClosed: validRoomMock.isClosed,
+        removeAt: validRoomMock.removeAt,
+        createdAt: validRoomMock.createdAt,
+        updatedAt: validRoomMock.updatedAt,
+      });
+    });
+
+    it('When room does not exist, then it should throw', async () => {
+      roomService.getRoomByRoomId.mockResolvedValueOnce(null);
+
+      await expect(callUseCase.getRoomMetadata(roomId)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
+    });
+
+    it('When room is expired, then it should throw', async () => {
+      const currentDate = Time.now('2025-01-02');
+      const pastDate = Time.dateWithTimeAdded(-3, 'day', currentDate);
+      const expiredRoomMock = createMockRoom({
+        id: roomId,
+        removeAt: pastDate,
+      });
+
+      jest.useFakeTimers();
+      jest.setSystemTime(currentDate);
+
+      roomService.getRoomByRoomId.mockResolvedValueOnce(expiredRoomMock);
+
+      await expect(callUseCase.getRoomMetadata(roomId)).rejects.toThrow(
+        GoneException,
       );
     });
   });
