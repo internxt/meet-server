@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  GoneException,
   Injectable,
   Logger,
   NotFoundException,
@@ -15,6 +16,7 @@ import { CallService } from './services/call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallResponseDto } from './dto/join-call.dto';
 import { ConfigService } from '@nestjs/config';
+import { Time } from '../../common/time';
 
 @Injectable()
 export class CallUseCase {
@@ -29,19 +31,6 @@ export class CallUseCase {
   async createCallAndRoom(
     user: User | UserTokenData['payload'],
   ): Promise<CreateCallResponseDto> {
-    const activeRoom = await this.roomService.getOpenRoomByHostId(user.uuid);
-
-    // TODO: Remove this check and look for a better way to handle this
-    if (activeRoom) {
-      this.logger.warn(
-        { userId: user.uuid, roomId: activeRoom.id },
-        `User already has an active room as host, closing previous room`,
-      );
-      await this.roomService.removeRoom(activeRoom.id);
-    }
-
-    await this.validateUserHasNoActiveRoom(user.uuid, user.email);
-
     const call = await this.callService.createCall(user);
 
     const newRoom = new Room({
@@ -83,6 +72,11 @@ export class CallUseCase {
     const room = await this.roomService.getRoomByRoomId(roomId);
     if (!room) {
       throw new NotFoundException(`Specified room not found`);
+    }
+
+    if (room.removeAt && Time.isBefore(room.removeAt, Time.now())) {
+      await this.roomService.removeRoom(room.id);
+      throw new GoneException('Room is expired');
     }
 
     const joiningUserData = {
@@ -131,7 +125,7 @@ export class CallUseCase {
       await this.callService.kickParticipant(roomId, oldParticipantId);
     }
 
-    const tokenData = this.callService.generateJitsiJWT(
+    const callTokenData = this.callService.generateJitsiJWT(
       {
         id: joiningUserData.userId,
         userRoomId: roomUser.id,
@@ -151,7 +145,7 @@ export class CallUseCase {
     }
 
     return {
-      token: tokenData,
+      token: callTokenData,
       room: roomId,
       userId: roomUser.userId,
       appId: this.configService.get<string>('jitsi.appId'),

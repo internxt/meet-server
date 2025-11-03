@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { OmitCreateProperties } from '../../../shared/types/OmitCreateProperties';
 import { Room, RoomAttributes } from '../domain/room.domain';
 import { RoomModel } from '../models/room.model';
+import { Transaction } from 'sequelize';
 
 @Injectable()
 export class SequelizeRoomRepository {
@@ -36,6 +37,14 @@ export class SequelizeRoomRepository {
     data: Partial<RoomAttributes>,
   ): Promise<void> {
     await this.roomModel.update(data, { where: { id } });
+  }
+
+  async updateWhere(
+    where: Partial<RoomAttributes>,
+    data: Partial<RoomAttributes>,
+    t?: Transaction,
+  ): Promise<void> {
+    await this.roomModel.update(data, { where, transaction: t });
   }
 
   async delete(id: RoomAttributes['id']): Promise<void> {

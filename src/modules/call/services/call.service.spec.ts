@@ -86,5 +86,4 @@ describe('Call service', () => {
 
     expect(paymentService.getUserTier).toHaveBeenCalledWith(userPayload.uuid);
   });
-
 });

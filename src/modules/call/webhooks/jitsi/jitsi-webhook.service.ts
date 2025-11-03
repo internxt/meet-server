@@ -10,6 +10,9 @@ import {
 } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { CallService } from '../../services/call.service';
+import { Time } from '../../../../common/time';
+import { SequelizeRoomRepository } from '../../infrastructure/room.repository';
+import { Room } from '../../domain/room.domain';
 @Injectable()
 export class JitsiWebhookService {
   private readonly logger = new Logger(JitsiWebhookService.name);
@@ -20,6 +23,8 @@ export class JitsiWebhookService {
 
     private readonly roomService: RoomService,
     private readonly roomUserRepository: SequelizeRoomUserRepository,
+    private readonly roomRepository: SequelizeRoomRepository,
+
     private readonly sequelize: Sequelize,
     private readonly configService: ConfigService,
   ) {
@@ -34,14 +39,14 @@ export class JitsiWebhookService {
   async handleParticipantJoined(
     payload: JitsiParticipantJoinedWebHookPayload,
   ): Promise<void> {
-    try {
-      this.logger.log(
-        {
-          payload,
-        },
-        'Handling PARTICIPANT_JOINED event',
-      );
+    this.logger.log(
+      {
+        payload,
+      },
+      'Handling PARTICIPANT_JOINED event',
+    );
 
+    try {
       const roomId = this.extractRoomId(payload.fqn);
       if (!roomId) {
         this.logger.warn(`Could not extract room ID from FQN: ${payload.fqn}`);
@@ -69,6 +74,30 @@ export class JitsiWebhookService {
       let participantToKick: string | undefined;
 
       await this.sequelize.transaction(async (transaction) => {
+        const hasExpirationTime = !!room.removeAt;
+
+        if (!hasExpirationTime) {
+          const expirationTime = Time.dateWithTimeAdded(
+            Room.getRoomExpirationDays(),
+            'day',
+          );
+          await this.roomRepository.updateWhere(
+            { removeAt: null, id: room.id },
+            {
+              removeAt: expirationTime,
+            },
+            transaction,
+          );
+
+          room.removeAt = expirationTime;
+        }
+
+        if (Time.isBefore(room.removeAt, Time.now())) {
+          this.logger.warn({ room }, 'Room expired');
+          await this.roomService.removeRoom(room.id);
+          return;
+        }
+
         const roomUser = await this.roomUserRepository.findById(roomUserId, {
           transaction,
           lock: true,
@@ -79,22 +108,13 @@ export class JitsiWebhookService {
           return;
         }
 
-        const isFirstConnection = !roomUser.joinedAt && !roomUser.participantId;
+        const userFirstConnection =
+          !roomUser.joinedAt && !roomUser.participantId;
+        const isNewerTimestamp = webhookTimestamp > roomUser.joinedAt;
 
-        if (isFirstConnection) {
-          await this.roomUserRepository.update(
-            roomUserId,
-            {
-              participantId: newParticipantId,
-              joinedAt: webhookTimestamp,
-            },
-            transaction,
-          );
-          return;
-        }
-
-        if (webhookTimestamp > roomUser.joinedAt) {
-          if (roomUser?.participantId !== newParticipantId) {
+        if (userFirstConnection || isNewerTimestamp) {
+          if (isNewerTimestamp && roomUser.participantId !== newParticipantId) {
+            //  Kick old connection if user connected twice
             participantToKick = roomUser.participantId;
           }
 
@@ -106,28 +126,29 @@ export class JitsiWebhookService {
             },
             transaction,
           );
-          return;
-        }
+        } else {
+          //  If webhook is an webhook retry attempt and user is connected succesfully already, try to kick old connection
+          participantToKick = newParticipantId;
 
-        participantToKick = newParticipantId;
-        this.logger.warn(
-          {
-            roomUserId,
-            webhookTimestamp,
-            currentJoinedAt: roomUser.joinedAt,
-            obsoleteParticipantId: newParticipantId,
-          },
-          'Received obsolete participant joined webhook',
-        );
+          this.logger.warn(
+            {
+              roomUserId,
+              webhookTimestamp,
+              currentJoinedAt: roomUser.joinedAt,
+              obsoleteParticipantId: newParticipantId,
+            },
+            'Received obsolete PARTICIPANT_JOINED webhook, kicking this user if still online',
+          );
+        }
       });
 
       if (participantToKick) {
-        this.logger.log(
+        this.logger.warn(
           {
             roomId,
             participantToKick,
           },
-          'Kicking participant due to webhook processing',
+          'Kicking participant',
         );
         await this.callService.kickParticipant(roomId, participantToKick);
       }

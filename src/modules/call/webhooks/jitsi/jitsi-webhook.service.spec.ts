@@ -5,15 +5,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
 import { Sequelize } from 'sequelize-typescript';
 import { Room } from '../../domain/room.domain';
+import { RoomUser } from '../../domain/room-user.domain';
 import { RoomService } from '../../services/room.service';
 import { SequelizeRoomUserRepository } from '../../infrastructure/room-user.repository';
-import { CallService } from '../../services/call.service';
 import {
   JitsiGenericWebHookEvent,
   JitsiWebhookPayload,
 } from './interfaces/JitsiGenericWebHookPayload';
 import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { JitsiWebhookService } from './jitsi-webhook.service';
+import { v4 } from 'uuid';
+import { Time } from '../../../../common/time';
+import {
+  createMockJitsiWebhookEvent,
+  createMockRoom,
+  createMockRoomUser,
+} from '../../fixtures';
+import { SequelizeRoomRepository } from '../../infrastructure/room.repository';
 
 jest.mock('crypto', () => {
   const originalModule = jest.requireActual<typeof import('crypto')>('crypto');
@@ -33,8 +41,9 @@ describe('JitsiWebhookService', () => {
   let service: JitsiWebhookService;
   let roomService: DeepMocked<RoomService>;
   let configService: DeepMocked<ConfigService>;
-  let callService: DeepMocked<CallService>;
   let roomUserRepository: DeepMocked<SequelizeRoomUserRepository>;
+  let roomRepository: DeepMocked<SequelizeRoomRepository>;
+
   let sequelize: DeepMocked<Sequelize>;
 
   const minimalRoom = new Room({
@@ -54,7 +63,10 @@ describe('JitsiWebhookService', () => {
     service = module.get<JitsiWebhookService>(JitsiWebhookService);
     roomService = module.get<DeepMocked<RoomService>>(RoomService);
     configService = module.get<DeepMocked<ConfigService>>(ConfigService);
-    callService = module.get<DeepMocked<CallService>>(CallService);
+    roomRepository = module.get<DeepMocked<SequelizeRoomRepository>>(
+      SequelizeRoomRepository,
+    );
+
     roomUserRepository = module.get<DeepMocked<SequelizeRoomUserRepository>>(
       SequelizeRoomUserRepository,
     );
@@ -63,10 +75,6 @@ describe('JitsiWebhookService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
   });
 
   describe('handleParticipantLeft', () => {
@@ -245,6 +253,89 @@ describe('JitsiWebhookService', () => {
         undefined,
         'test-participant-id',
         new Date(mockEvent.timestamp),
+      );
+    });
+  });
+
+  describe('handleParticipantJoined', () => {
+    const currentDate = Time.now('2025-01-01');
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(currentDate);
+      sequelize.transaction.mockImplementation((callback: any) => {
+        const mockTransaction = {};
+        return callback(mockTransaction);
+      });
+    });
+
+    afterEach(() => jest.useRealTimers());
+
+    it('When room has expired, then it should remove room', async () => {
+      const expiredDate = Time.dateWithTimeAdded(-3, 'day', currentDate);
+      const expiredRoom = createMockRoom({
+        removeAt: expiredDate,
+      });
+      const mockJoinedEvent = createMockJitsiWebhookEvent({
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
+        roomId: expiredRoom.id,
+      });
+
+      roomService.getRoomByRoomId.mockResolvedValue(expiredRoom);
+      roomService.removeRoom.mockResolvedValue(undefined);
+
+      await service.handleParticipantJoined(mockJoinedEvent);
+
+      expect(roomService.removeRoom).toHaveBeenCalledWith(expiredRoom.id);
+    });
+
+    it('When room has not expired, then it should continue normal processing', async () => {
+      const futureDate = Time.dateWithTimeAdded(30, 'day', currentDate);
+      const activeRoom = createMockRoom({
+        removeAt: futureDate,
+      });
+      const mockRoomUser = createMockRoomUser({ roomId: activeRoom.id });
+      const mockJoinedEvent = createMockJitsiWebhookEvent({
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
+        roomUserId: mockRoomUser.id,
+        participantId: mockRoomUser.participantId,
+        roomId: activeRoom.id,
+      });
+      roomService.getRoomByRoomId.mockResolvedValue(activeRoom);
+      roomUserRepository.findById.mockResolvedValue(mockRoomUser);
+      roomUserRepository.update.mockResolvedValue(undefined);
+
+      await service.handleParticipantJoined(mockJoinedEvent);
+
+      expect(roomService.removeRoom).not.toHaveBeenCalled();
+      expect(roomUserRepository.findById).toHaveBeenCalled();
+    });
+
+    it('When room does not have expiration time, then it should set it', async () => {
+      const room = createMockRoom({ removeAt: null });
+      const roomUser = createMockRoomUser();
+      const expirationTime = Time.dateWithTimeAdded(30, 'day');
+      const mockJoinedEvent = createMockJitsiWebhookEvent({
+        eventType: JitsiGenericWebHookEvent.PARTICIPANT_JOINED,
+        participantId: roomUser.participantId,
+        roomUserId: roomUser.id,
+        roomId: room.id,
+      });
+
+      roomService.getRoomByRoomId.mockResolvedValue(room);
+      roomUserRepository.findById.mockResolvedValue(roomUser);
+
+      await service.handleParticipantJoined(mockJoinedEvent);
+
+      expect(roomRepository.updateWhere).toHaveBeenCalledWith(
+        {
+          removeAt: null,
+          id: room.id,
+        },
+        {
+          removeAt: expirationTime,
+        },
+        expect.any(Object),
       );
     });
   });

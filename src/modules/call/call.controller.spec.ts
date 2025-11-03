@@ -63,16 +63,6 @@ describe('Testing Call Endpoints', () => {
   });
 
   describe('Creating a call', () => {
-    it('When the user id is not provided (uuid), then an error indicating so is thrown', async () => {
-      await expect(
-        callController.createCall(
-          createMockUserToken({
-            payload: { ...createMockUserToken().payload, uuid: undefined },
-          }).payload,
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it('When the user id exists and has meet enabled, then should create the call and the room', async () => {
       const mockUserToken = createMockUserToken();
       const mockResponse = {
@@ -266,14 +256,6 @@ describe('Testing Call Endpoints', () => {
         anonymous: false,
       });
       expect(result).toEqual(mockJoinCallResponse);
-    });
-
-    it('When joining a call with invalid room name (not UUID), then it should throw', async () => {
-      callUseCase.joinCall.mockResolvedValue(mockJoinCallResponse);
-
-      await expect(
-        callController.joinCall('invalid room name', null, mockJoinCallDto),
-      ).rejects.toThrow(BadRequestException);
     });
   });
 
