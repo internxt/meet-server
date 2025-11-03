@@ -16,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
+  ApiGoneResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -33,6 +34,7 @@ import { CallUseCase } from './call.usecase';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
+import { GetCallDataDto } from './dto/get-call-data.dto';
 import { ValidateUUIDPipe } from '../../common/pipes/validate-uuid.pipe';
 
 @ApiTags('Call')
@@ -150,6 +152,26 @@ export class CallController {
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   getUsersInCall(@Param('id') roomId: string): Promise<UsersInRoomDto[]> {
     return this.roomService.getUsersInRoom(roomId);
+  }
+
+  @Get('/:id')
+  @HttpCode(200)
+  @OptionalAuth()
+  @ApiOperation({
+    summary: 'Get call metadata',
+  })
+  @ApiBearerAuth()
+  @ApiParam({ name: 'id', description: 'Call ID' })
+  @ApiOkResponse({
+    description: 'Successfully retrieved call data',
+    type: GetCallDataDto,
+  })
+  @ApiNotFoundResponse({ description: 'Call not found' })
+  @ApiGoneResponse({ description: 'Call has expired' })
+  getCallData(
+    @Param('id', ValidateUUIDPipe) roomId: string,
+  ): Promise<GetCallDataDto> {
+    return this.callUseCase.getRoomMetadata(roomId);
   }
 
   @Post('/:id/users/leave')

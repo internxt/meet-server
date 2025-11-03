@@ -12,7 +12,7 @@ export class SequelizeRoomRepository {
     private readonly roomModel: typeof RoomModel,
   ) {}
 
-  async create(data: OmitCreateProperties<Room>): Promise<Room> {
+  async create(data: OmitCreateProperties<RoomAttributes>): Promise<Room> {
     const room = await this.roomModel.create(data);
     return Room.build(room);
   }

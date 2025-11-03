@@ -15,6 +15,7 @@ import { User } from '../../shared/user/user.domain';
 import { CallService } from './services/call.service';
 import { CreateCallResponseDto } from './dto/create-call.dto';
 import { JoinCallResponseDto } from './dto/join-call.dto';
+import { GetCallDataDto } from './dto/get-call-data.dto';
 import { ConfigService } from '@nestjs/config';
 import { Time } from '../../common/time';
 
@@ -42,6 +43,27 @@ export class CallUseCase {
     await this.roomService.createRoom(newRoom);
 
     return call;
+  }
+
+  async getRoomMetadata(roomId: string): Promise<GetCallDataDto> {
+    const room = await this.roomService.getRoomByRoomId(roomId);
+
+    if (!room) {
+      throw new NotFoundException();
+    }
+
+    if (room.isExpired()) {
+      throw new GoneException('Room is expired');
+    }
+
+    return {
+      id: room.id,
+      maxUsersAllowed: room.maxUsersAllowed,
+      isClosed: room.isClosed,
+      removeAt: room.removeAt,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
+    };
   }
 
   async validateUserHasNoActiveRoom(
