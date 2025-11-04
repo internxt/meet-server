@@ -102,7 +102,7 @@ export class SequelizeRoomUserRepository {
     await this.roomUserModel.destroy({ where: { participantId, roomId } });
   }
 
-  async deleteByParticipantAndTimestamp(
+  async destroyParticipantWithOlderTimestamp(
     roomUserId: string,
     participantId: string,
     maxTimestamp: Date,

@@ -31,7 +31,10 @@ import { UserTokenData } from '../auth/dto/user.dto';
 import { UsersInRoomDto } from './dto/users-in-room.dto';
 import { RoomService } from './services/room.service';
 import { CallUseCase } from './call.usecase';
-import { CreateCallResponseDto } from './dto/create-call.dto';
+import {
+  CreateCallRequestDto,
+  CreateCallResponseDto,
+} from './dto/create-call.dto';
 import { JoinCallDto, JoinCallResponseDto } from './dto/join-call.dto';
 import { LeaveCallDto } from './dto/leave-call.dto';
 import { GetCallDataDto } from './dto/get-call-data.dto';
@@ -54,6 +57,7 @@ export class CallController {
     summary: 'Creates a Meet (Jitsi) token',
   })
   @ApiBearerAuth()
+  @ApiBody({ type: CreateCallRequestDto, required: false })
   @ApiOkResponse({
     description: 'Creates a Jitsi token and returns it to create the call',
     type: CreateCallResponseDto,
@@ -63,6 +67,7 @@ export class CallController {
   @ApiConflictResponse({ description: 'Room already exists' })
   async createCall(
     @User() user: UserTokenData['payload'],
+    @Body() createCallDto?: CreateCallRequestDto,
   ): Promise<CreateCallResponseDto> {
     const { uuid, email } = user || {};
     if (!uuid) {
@@ -73,7 +78,10 @@ export class CallController {
     }
 
     try {
-      const call = await this.callUseCase.createCallAndRoom(user);
+      const call = await this.callUseCase.createCallAndRoom(
+        user,
+        createCallDto?.scheduled,
+      );
       return call;
     } catch (error) {
       const err = error as Error;

@@ -46,6 +46,7 @@ export const mockRoomData = {
   createdAt: randomDataGenerator.date(),
   updatedAt: randomDataGenerator.date(),
   removeAt: undefined,
+  scheduled: false,
 };
 
 export const createMockRoom = (attributes?: Partial<Room>): Room => {
@@ -66,6 +67,7 @@ export const mockCallResponse: CreateCallResponseDto = {
   room: mockRoomData.id,
   paxPerCall: mockRoomData.maxUsersAllowed,
   appId: 'testAppId',
+  scheduled: false,
 };
 
 export const createMockCallResponse = (
@@ -147,6 +149,46 @@ export const createMockJitsiWebhookEvent = ({
     data: {
       moderator: false,
       name: randomDataGenerator.name(),
+      id: `${mockParticipantId}/${mockRoomUserId}`,
+      participantJid: randomDataGenerator.guid(),
+      participantId: mockParticipantId,
+    },
+    ...overrides,
+  };
+};
+
+export const createMockJitsiParticipantLeftWebhookEvent = ({
+  overrides,
+  participantId,
+  roomUserId,
+  roomId,
+  appId,
+  disconnectReason = 'left',
+}: {
+  overrides?: Partial<JitsiParticipantLeftWebHookPayload>;
+  participantId?: string;
+  roomUserId?: string;
+  roomId?: string;
+  appId?: string;
+  disconnectReason?: 'left' | 'kicked' | 'unknown' | 'switch_room' | 'unrecoverable_error';
+}): JitsiParticipantLeftWebHookPayload => {
+  const mockParticipantId = participantId ?? randomDataGenerator.guid();
+  const mockRoomUserId = roomUserId ?? v4();
+  const mockAppId = appId ?? randomDataGenerator.word();
+  const mockRoomId = roomId ?? randomDataGenerator.guid();
+
+  return {
+    idempotencyKey: v4(),
+    customerId: randomDataGenerator.guid(),
+    appId: mockAppId,
+    eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
+    sessionId: v4(),
+    timestamp: Date.now(),
+    fqn: `${mockAppId}/${mockRoomId}`,
+    data: {
+      moderator: false,
+      name: randomDataGenerator.name(),
+      disconnectReason,
       id: `${mockParticipantId}/${mockRoomUserId}`,
       participantJid: randomDataGenerator.guid(),
       participantId: mockParticipantId,

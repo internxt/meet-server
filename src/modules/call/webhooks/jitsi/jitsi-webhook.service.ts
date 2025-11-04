@@ -194,9 +194,9 @@ export class JitsiWebhookService {
         return;
       }
 
-      const webhookTimestamp = new Date(payload.timestamp);
+      const webhookTimestamp = Time.now(payload.timestamp);
       const deletedRows =
-        await this.roomUserRepository.deleteByParticipantAndTimestamp(
+        await this.roomUserRepository.destroyParticipantWithOlderTimestamp(
           roomUserId,
           payload.data.participantId,
           webhookTimestamp,
@@ -207,12 +207,6 @@ export class JitsiWebhookService {
         if (isOwner) {
           await this.roomService.closeRoom(roomId);
         }
-      }
-
-      const remainingUsers = await this.roomService.countUsersInRoom(roomId);
-      if (remainingUsers === 0) {
-        this.logger.log({ roomId, userId }, 'Room empty, removing room');
-        await this.roomService.removeRoom(roomId);
       }
 
       this.logger.log(

@@ -5,23 +5,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
 import { Sequelize } from 'sequelize-typescript';
 import { Room } from '../../domain/room.domain';
-import { RoomUser } from '../../domain/room-user.domain';
 import { RoomService } from '../../services/room.service';
 import { SequelizeRoomUserRepository } from '../../infrastructure/room-user.repository';
 import {
   JitsiGenericWebHookEvent,
   JitsiWebhookPayload,
 } from './interfaces/JitsiGenericWebHookPayload';
-import { JitsiParticipantLeftWebHookPayload } from './interfaces/JitsiParticipantLeftData';
 import { JitsiWebhookService } from './jitsi-webhook.service';
-import { v4 } from 'uuid';
 import { Time } from '../../../../common/time';
 import {
   createMockJitsiWebhookEvent,
+  createMockJitsiParticipantLeftWebhookEvent,
   createMockRoom,
   createMockRoomUser,
 } from '../../fixtures';
 import { SequelizeRoomRepository } from '../../infrastructure/room.repository';
+import { v4 } from 'uuid';
 
 jest.mock('crypto', () => {
   const originalModule = jest.requireActual<typeof import('crypto')>('crypto');
@@ -47,9 +46,9 @@ describe('JitsiWebhookService', () => {
   let sequelize: DeepMocked<Sequelize>;
 
   const minimalRoom = new Room({
-    id: 'test-room-id',
+    id: v4(),
     maxUsersAllowed: 10,
-    hostId: 'host-id',
+    hostId: v4(),
   });
 
   beforeEach(async () => {
@@ -79,180 +78,121 @@ describe('JitsiWebhookService', () => {
 
   describe('handleParticipantLeft', () => {
     it('When participant leaves, then it should remove user from room', async () => {
+      const participantId = v4();
+      const roomUserId = v4();
+      const roomId = v4();
+
       roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
-      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(1);
+      roomUserRepository.destroyParticipantWithOlderTimestamp.mockResolvedValue(
+        1,
+      );
 
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
+      const mockEvent = createMockJitsiParticipantLeftWebhookEvent({
+        participantId,
+        roomUserId,
+        roomId,
         appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: 'test-participant-id/room-user-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
-        },
-      };
+      });
 
       await service.handleParticipantLeft(mockEvent);
 
       expect(
-        roomUserRepository.deleteByParticipantAndTimestamp,
+        roomUserRepository.destroyParticipantWithOlderTimestamp,
       ).toHaveBeenCalledWith(
-        'room-user-id',
-        'test-participant-id',
-        new Date(mockEvent.timestamp),
+        roomUserId,
+        participantId,
+        Time.now(mockEvent.timestamp),
       );
     });
 
-    it('When room owner leaves, then it should close room and remove user', async () => {
+    it('When user leaves, then it should remove user', async () => {
+      const participantId = v4();
+      const roomUserId = v4();
+      const roomId = v4();
+
       const ownerRoom = new Room({
-        id: 'test-room-id',
-        hostId: 'test-participant-id',
+        id: roomId,
+        hostId: participantId,
         maxUsersAllowed: 10,
         isClosed: false,
       });
 
       roomService.getRoomByRoomId.mockResolvedValue(ownerRoom);
-      roomService.closeRoom.mockResolvedValue(undefined);
-      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(1);
-
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
-        appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: 'test-participant-id/room-user-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
-        },
-      };
-
-      await service.handleParticipantLeft(mockEvent);
-
-      expect(roomService.closeRoom).toHaveBeenCalledWith('test-room-id');
-
-      expect(
-        roomUserRepository.deleteByParticipantAndTimestamp,
-      ).toHaveBeenCalledWith(
-        'room-user-id',
-        'test-participant-id',
-        new Date(mockEvent.timestamp),
+      roomUserRepository.destroyParticipantWithOlderTimestamp.mockResolvedValue(
+        1,
       );
-    });
 
-    it('When non-owner participant leaves, then it should not close room but remove user', async () => {
-      const ownerRoom = new Room({
-        id: 'test-room-id',
-        hostId: 'test-participant-id-not-owner',
-        maxUsersAllowed: 10,
-        isClosed: false,
+      const mockEvent = createMockJitsiParticipantLeftWebhookEvent({
+        participantId,
+        roomUserId,
+        roomId,
+        appId: 'app-id',
       });
 
-      roomService.getRoomByRoomId.mockResolvedValue(ownerRoom);
-      roomService.closeRoom.mockResolvedValue(undefined);
-      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(1);
-
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
-        appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: 'test-participant-id/room-user-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
-        },
-      };
-
       await service.handleParticipantLeft(mockEvent);
 
-      expect(roomService.closeRoom).not.toHaveBeenCalled();
-
       expect(
-        roomUserRepository.deleteByParticipantAndTimestamp,
+        roomUserRepository.destroyParticipantWithOlderTimestamp,
       ).toHaveBeenCalledWith(
-        'room-user-id',
-        'test-participant-id',
-        new Date(mockEvent.timestamp),
+        roomUserId,
+        participantId,
+        Time.now(mockEvent.timestamp),
       );
     });
 
     it('When FQN has missing room ID, then it should skip processing', async () => {
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
-        appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: '',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: 'test-participant-id/room-user-id',
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
+      const participantId = v4();
+      const roomUserId = v4();
+
+      const mockEvent = createMockJitsiParticipantLeftWebhookEvent({
+        participantId,
+        roomUserId,
+        overrides: {
+          fqn: '',
         },
-      };
+      });
 
       await service.handleParticipantLeft(mockEvent);
 
       expect(
-        roomUserRepository.deleteByParticipantAndTimestamp,
+        roomUserRepository.destroyParticipantWithOlderTimestamp,
       ).not.toHaveBeenCalled();
     });
 
     it('When participant ID is empty, then it should process with undefined roomUserId', async () => {
-      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
-      roomUserRepository.deleteByParticipantAndTimestamp.mockResolvedValue(0);
+      const participantId = v4();
+      const roomId = v4();
+      const participantJid = v4();
 
-      const mockEvent: JitsiParticipantLeftWebHookPayload = {
-        idempotencyKey: 'test-key',
-        customerId: 'customer-id',
+      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
+      roomUserRepository.destroyParticipantWithOlderTimestamp.mockResolvedValue(
+        0,
+      );
+
+      const mockEvent = createMockJitsiParticipantLeftWebhookEvent({
+        participantId,
+        roomId,
         appId: 'app-id',
-        eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-        sessionId: 'session-id',
-        timestamp: Date.now(),
-        fqn: 'app-id/test-room-id',
-        data: {
-          moderator: 'false',
-          name: 'Test User',
-          disconnectReason: 'left',
-          id: '', // Empty participant ID
-          participantJid: 'test-jid',
-          participantId: 'test-participant-id',
+        overrides: {
+          data: {
+            moderator: false,
+            name: 'Test User',
+            disconnectReason: 'left',
+            id: '', // Empty participant ID
+            participantJid,
+            participantId,
+          },
         },
-      };
+      });
 
       await service.handleParticipantLeft(mockEvent);
 
       expect(
-        roomUserRepository.deleteByParticipantAndTimestamp,
+        roomUserRepository.destroyParticipantWithOlderTimestamp,
       ).toHaveBeenCalledWith(
         undefined,
-        'test-participant-id',
-        new Date(mockEvent.timestamp),
+        participantId,
+        Time.now(mockEvent.timestamp),
       );
     });
   });

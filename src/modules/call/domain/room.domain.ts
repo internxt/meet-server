@@ -7,6 +7,7 @@ export interface RoomAttributes {
   hostId: string;
   isClosed?: boolean;
   removeAt?: Date;
+  scheduled?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -17,6 +18,7 @@ export class Room implements RoomAttributes {
   hostId: string;
   isClosed?: boolean;
   removeAt?: Date;
+  scheduled?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -31,6 +33,7 @@ export class Room implements RoomAttributes {
       hostId: this.hostId,
       isClosed: this.isClosed,
       removeAt: this.removeAt,
+      scheduled: this.scheduled,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
@@ -50,6 +53,7 @@ export class Room implements RoomAttributes {
       hostId: attributes.hostId,
       isClosed: attributes.isClosed,
       removeAt: attributes.removeAt,
+      scheduled: attributes.scheduled,
       createdAt: attributes.createdAt,
       updatedAt: attributes.updatedAt,
     });

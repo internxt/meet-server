@@ -70,6 +70,7 @@ describe('Testing Call Endpoints', () => {
         room: 'room-123',
         paxPerCall: 5,
         appId: 'jitsi-app-id',
+        scheduled: false,
       };
 
       callUseCase.createCallAndRoom.mockResolvedValueOnce(mockResponse);
@@ -78,6 +79,7 @@ describe('Testing Call Endpoints', () => {
 
       expect(callUseCase.createCallAndRoom).toHaveBeenCalledWith(
         mockUserToken.payload,
+        undefined,
       );
       expect(result).toEqual(mockResponse);
     });

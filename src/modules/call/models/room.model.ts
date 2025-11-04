@@ -15,6 +15,7 @@ interface RoomModelAttributes {
   hostId: string;
   isClosed: boolean;
   removeAt?: Date;
+  scheduled?: boolean;
 }
 
 @Table({ tableName: 'rooms', timestamps: true, underscored: true })
@@ -38,6 +39,10 @@ export class RoomModel extends Model<RoomModel> implements RoomModelAttributes {
   @AllowNull
   @Column(DataType.DATE)
   removeAt?: Date;
+
+  @AllowNull
+  @Column(DataType.BOOLEAN)
+  scheduled?: boolean;
 
   @CreatedAt
   createdAt: Date;
