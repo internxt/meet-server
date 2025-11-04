@@ -132,7 +132,7 @@ export const createMockJitsiWebhookEvent = ({
   roomId?: string;
   appId?: string;
   eventType: JitsiGenericWebHookEvent;
-}): JitsiParticipantJoinedWebHookPayload => {
+}) => {
   const mockParticipantId = participantId ?? randomDataGenerator.guid();
   const mockRoomUserId = roomUserId ?? v4();
   const mockAppId = appId ?? randomDataGenerator.word();
@@ -170,29 +170,32 @@ export const createMockJitsiParticipantLeftWebhookEvent = ({
   roomUserId?: string;
   roomId?: string;
   appId?: string;
-  disconnectReason?: 'left' | 'kicked' | 'unknown' | 'switch_room' | 'unrecoverable_error';
+  disconnectReason?:
+    | 'left'
+    | 'kicked'
+    | 'unknown'
+    | 'switch_room'
+    | 'unrecoverable_error';
 }): JitsiParticipantLeftWebHookPayload => {
   const mockParticipantId = participantId ?? randomDataGenerator.guid();
   const mockRoomUserId = roomUserId ?? v4();
-  const mockAppId = appId ?? randomDataGenerator.word();
-  const mockRoomId = roomId ?? randomDataGenerator.guid();
 
-  return {
-    idempotencyKey: v4(),
-    customerId: randomDataGenerator.guid(),
-    appId: mockAppId,
+  return createMockJitsiWebhookEvent({
     eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
-    sessionId: v4(),
-    timestamp: Date.now(),
-    fqn: `${mockAppId}/${mockRoomId}`,
-    data: {
-      moderator: false,
-      name: randomDataGenerator.name(),
-      disconnectReason,
-      id: `${mockParticipantId}/${mockRoomUserId}`,
-      participantJid: randomDataGenerator.guid(),
-      participantId: mockParticipantId,
+    participantId: mockParticipantId,
+    roomUserId: mockRoomUserId,
+    roomId,
+    appId,
+    overrides: {
+      data: {
+        moderator: false,
+        name: randomDataGenerator.name(),
+        disconnectReason,
+        id: `${mockParticipantId}/${mockRoomUserId}`,
+        participantJid: randomDataGenerator.guid(),
+        participantId: mockParticipantId,
+      },
+      ...overrides,
     },
-    ...overrides,
-  };
+  }) as JitsiParticipantLeftWebHookPayload;
 };

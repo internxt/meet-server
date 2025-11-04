@@ -45,7 +45,7 @@ describe('JitsiWebhookService', () => {
 
   let sequelize: DeepMocked<Sequelize>;
 
-  const minimalRoom = new Room({
+  const mockRoom = new Room({
     id: v4(),
     maxUsersAllowed: 10,
     hostId: v4(),
@@ -82,7 +82,7 @@ describe('JitsiWebhookService', () => {
       const roomUserId = v4();
       const roomId = v4();
 
-      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
+      roomService.getRoomByRoomId.mockResolvedValue(mockRoom);
       roomUserRepository.destroyParticipantWithOlderTimestamp.mockResolvedValue(
         1,
       );
@@ -164,7 +164,7 @@ describe('JitsiWebhookService', () => {
       const roomId = v4();
       const participantJid = v4();
 
-      roomService.getRoomByRoomId.mockResolvedValue(minimalRoom);
+      roomService.getRoomByRoomId.mockResolvedValue(mockRoom);
       roomUserRepository.destroyParticipantWithOlderTimestamp.mockResolvedValue(
         0,
       );
