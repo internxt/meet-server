@@ -23,6 +23,18 @@ export class RoomService {
     return this.roomRepository.create(data);
   }
 
+  async getUserOwnedRoomsNumber(userUuid: User['uuid'], scheduled: boolean) {
+    return this.roomRepository.getUserOwnedRoomsCount(userUuid, scheduled);
+  }
+
+  async removeOldestRoom(userUuid: User['uuid'], scheduled: boolean) {
+    const oldestRoom = await this.roomRepository.getUserOldestRoom(
+      userUuid,
+      scheduled,
+    );
+    await this.roomRepository.delete(oldestRoom.id);
+  }
+
   async createUserInRoom(data: Omit<RoomUserAttributes, 'id'>) {
     return this.roomUserRepository.create(data);
   }

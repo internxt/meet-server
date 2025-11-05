@@ -6,7 +6,12 @@ import { SequelizeRoomUserRepository } from '../infrastructure/room-user.reposit
 import { UserRepository } from '../../../shared/user/user.repository';
 import { AvatarService } from '../../../externals/avatar/avatar.service';
 import { Room } from '../domain/room.domain';
-import { mockRoomData, createMockRoomUser, createMockUser } from '../fixtures';
+import {
+  mockRoomData,
+  createMockRoomUser,
+  createMockUser,
+  createMockRoom,
+} from '../fixtures';
 import { v4 } from 'uuid';
 
 describe('Room Service', () => {
@@ -365,6 +370,76 @@ describe('Room Service', () => {
         roomId,
       );
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getUserOwnedRoomsNumber', () => {
+    it('When getting count of scheduled rooms for user, then it should return the correct count', async () => {
+      const userUuid = v4();
+      const expectedCount = 25;
+      jest
+        .spyOn(roomRepository, 'getUserOwnedRoomsCount')
+        .mockResolvedValueOnce(expectedCount);
+
+      const result = await roomService.getUserOwnedRoomsNumber(userUuid, true);
+
+      expect(roomRepository.getUserOwnedRoomsCount).toHaveBeenCalledWith(
+        userUuid,
+        true,
+      );
+      expect(result).toBe(expectedCount);
+    });
+
+    it('When getting count of non-scheduled rooms for user, then it should return the correct count', async () => {
+      const userUuid = v4();
+      const expectedCount = 35;
+      jest
+        .spyOn(roomRepository, 'getUserOwnedRoomsCount')
+        .mockResolvedValueOnce(expectedCount);
+
+      const result = await roomService.getUserOwnedRoomsNumber(userUuid, false);
+
+      expect(roomRepository.getUserOwnedRoomsCount).toHaveBeenCalledWith(
+        userUuid,
+        false,
+      );
+      expect(result).toBe(expectedCount);
+    });
+  });
+
+  describe('removeOldestRoom', () => {
+    it('When removing oldest scheduled room, then it should get and delete the room', async () => {
+      const userUuid = v4();
+      const mockRoom = createMockRoom({ scheduled: true });
+      jest
+        .spyOn(roomRepository, 'getUserOldestRoom')
+        .mockResolvedValueOnce(mockRoom);
+      jest.spyOn(roomRepository, 'delete').mockResolvedValueOnce();
+
+      await roomService.removeOldestRoom(userUuid, true);
+
+      expect(roomRepository.getUserOldestRoom).toHaveBeenCalledWith(
+        userUuid,
+        true,
+      );
+      expect(roomRepository.delete).toHaveBeenCalledWith(mockRoom.id);
+    });
+
+    it('When removing oldest non-scheduled room, then it should get and delete the room', async () => {
+      const userUuid = v4();
+      const mockRoom = createMockRoom({ scheduled: false });
+      jest
+        .spyOn(roomRepository, 'getUserOldestRoom')
+        .mockResolvedValueOnce(mockRoom);
+      jest.spyOn(roomRepository, 'delete').mockResolvedValueOnce();
+
+      await roomService.removeOldestRoom(userUuid, false);
+
+      expect(roomRepository.getUserOldestRoom).toHaveBeenCalledWith(
+        userUuid,
+        false,
+      );
+      expect(roomRepository.delete).toHaveBeenCalledWith(mockRoom.id);
     });
   });
 });

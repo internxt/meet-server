@@ -88,9 +88,7 @@ describe('CallUseCase', () => {
     it('When creating call and room and user does not have an active room, then it should create call token and room successfully', async () => {
       callService.createCall.mockResolvedValueOnce(mockCallData);
       roomService.createRoom.mockResolvedValueOnce(undefined);
-      jest
-        .spyOn(callUseCase, 'validateUserHasNoActiveRoom')
-        .mockResolvedValueOnce(null);
+      roomService.getUserOwnedRoomsNumber.mockResolvedValueOnce(0);
 
       const result = await callUseCase.createCallAndRoom(mockUserPayload);
 
@@ -104,9 +102,7 @@ describe('CallUseCase', () => {
     it('When creating scheduled call, then it should the room and return scheduled in the body', async () => {
       callService.createCall.mockResolvedValueOnce(mockCallData);
       roomService.createRoom.mockResolvedValueOnce(undefined);
-      jest
-        .spyOn(callUseCase, 'validateUserHasNoActiveRoom')
-        .mockResolvedValueOnce(null);
+      roomService.getUserOwnedRoomsNumber.mockResolvedValueOnce(0);
 
       const result = await callUseCase.createCallAndRoom(mockUserPayload, true);
 
@@ -120,9 +116,7 @@ describe('CallUseCase', () => {
     it('When creating a non-scheduled call, then it should return the call as not scheduled', async () => {
       callService.createCall.mockResolvedValueOnce(mockCallData);
       roomService.createRoom.mockResolvedValueOnce(undefined);
-      jest
-        .spyOn(callUseCase, 'validateUserHasNoActiveRoom')
-        .mockResolvedValueOnce(null);
+      roomService.getUserOwnedRoomsNumber.mockResolvedValueOnce(0);
 
       const result = await callUseCase.createCallAndRoom(
         mockUserPayload,
@@ -134,6 +128,56 @@ describe('CallUseCase', () => {
         ...mockCallData,
         scheduled: false,
       });
+    });
+
+    it('When user has less than 50 non-scheduled calls, then it should not remove oldest non-scheduled room', async () => {
+      callService.createCall.mockResolvedValueOnce(mockCallData);
+      roomService.createRoom.mockResolvedValueOnce(undefined);
+      roomService.getUserOwnedRoomsNumber.mockResolvedValueOnce(30);
+
+      await callUseCase.createCallAndRoom(mockUserPayload, false);
+
+      expect(roomService.getUserOwnedRoomsNumber).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+        false,
+      );
+      expect(roomService.removeOldestRoom).not.toHaveBeenCalled();
+    });
+
+    it('When user has exactly 50 scheduled calls, then it should remove oldest scheduled room before creating new one', async () => {
+      callService.createCall.mockResolvedValueOnce(mockCallData);
+      roomService.createRoom.mockResolvedValueOnce(undefined);
+      roomService.getUserOwnedRoomsNumber.mockResolvedValueOnce(50);
+      roomService.removeOldestRoom.mockResolvedValueOnce(undefined);
+
+      await callUseCase.createCallAndRoom(mockUserPayload, true);
+
+      expect(roomService.getUserOwnedRoomsNumber).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+        true,
+      );
+      expect(roomService.removeOldestRoom).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+        true,
+      );
+    });
+
+    it('When user has exactly 50 non-scheduled calls, then it should remove oldest non-scheduled room before creating new one', async () => {
+      callService.createCall.mockResolvedValueOnce(mockCallData);
+      roomService.createRoom.mockResolvedValueOnce(undefined);
+      roomService.getUserOwnedRoomsNumber.mockResolvedValueOnce(50);
+      roomService.removeOldestRoom.mockResolvedValueOnce(undefined);
+
+      await callUseCase.createCallAndRoom(mockUserPayload, false);
+
+      expect(roomService.getUserOwnedRoomsNumber).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+        false,
+      );
+      expect(roomService.removeOldestRoom).toHaveBeenCalledWith(
+        mockUserPayload.uuid,
+        false,
+      );
     });
   });
 
