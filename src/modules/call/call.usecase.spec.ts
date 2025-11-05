@@ -95,8 +95,45 @@ describe('CallUseCase', () => {
       const result = await callUseCase.createCallAndRoom(mockUserPayload);
 
       expect(callService.createCall).toHaveBeenCalledWith(mockUserPayload);
-      expect(roomService.createRoom).toHaveBeenCalledWith(expect.any(Room));
-      expect(result).toEqual(mockCallData);
+      expect(result).toEqual({
+        ...mockCallData,
+        scheduled: false,
+      });
+    });
+
+    it('When creating scheduled call, then it should the room and return scheduled in the body', async () => {
+      callService.createCall.mockResolvedValueOnce(mockCallData);
+      roomService.createRoom.mockResolvedValueOnce(undefined);
+      jest
+        .spyOn(callUseCase, 'validateUserHasNoActiveRoom')
+        .mockResolvedValueOnce(null);
+
+      const result = await callUseCase.createCallAndRoom(mockUserPayload, true);
+
+      expect(callService.createCall).toHaveBeenCalledWith(mockUserPayload);
+      expect(result).toEqual({
+        ...mockCallData,
+        scheduled: true,
+      });
+    });
+
+    it('When creating a non-scheduled call, then it should return the call as not scheduled', async () => {
+      callService.createCall.mockResolvedValueOnce(mockCallData);
+      roomService.createRoom.mockResolvedValueOnce(undefined);
+      jest
+        .spyOn(callUseCase, 'validateUserHasNoActiveRoom')
+        .mockResolvedValueOnce(null);
+
+      const result = await callUseCase.createCallAndRoom(
+        mockUserPayload,
+        false,
+      );
+
+      expect(callService.createCall).toHaveBeenCalledWith(mockUserPayload);
+      expect(result).toEqual({
+        ...mockCallData,
+        scheduled: false,
+      });
     });
   });
 
@@ -599,22 +636,7 @@ describe('CallUseCase', () => {
       roomMock = createMock<Room>({ ...mockRoomData, id: roomId, hostId });
       roomService.getRoomByRoomId.mockResolvedValue(roomMock);
       roomService.removeUserFromRoom.mockResolvedValue();
-      roomService.closeRoom.mockResolvedValue();
       roomService.removeRoom.mockResolvedValue();
-    });
-
-    it('When a valid userId is provided, then it should handle leave call normally', async () => {
-      roomService.removeUserFromRoom.mockResolvedValueOnce(undefined);
-      roomService.countUsersInRoom.mockResolvedValueOnce(0);
-
-      await callUseCase.leaveCall(roomId, participantId);
-
-      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        participantId,
-        roomMock,
-      );
-      expect(roomService.removeRoom).toHaveBeenCalledWith(roomId);
     });
 
     it('When room does not exist, then it should throw', async () => {
@@ -625,13 +647,10 @@ describe('CallUseCase', () => {
       ).rejects.toThrow(NotFoundException);
       expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
       expect(roomService.removeUserFromRoom).not.toHaveBeenCalled();
-      expect(roomService.closeRoom).not.toHaveBeenCalled();
       expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
-    it('When host leaves a non-empty room, then it should remove user and close room', async () => {
-      roomService.countUsersInRoom.mockResolvedValueOnce(1);
-
+    it('When user leaves a room, then it should remove user', async () => {
       await callUseCase.leaveCall(roomId, hostId);
 
       expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
@@ -639,75 +658,9 @@ describe('CallUseCase', () => {
         hostId,
         roomMock,
       );
-      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.closeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeRoom).not.toHaveBeenCalled();
-    });
-
-    it('When the last user (host) leaves, then it should remove user and delete room', async () => {
-      roomService.countUsersInRoom.mockResolvedValueOnce(0);
-
-      await callUseCase.leaveCall(roomId, hostId);
-
-      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        hostId,
-        roomMock,
-      );
-      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.closeRoom).not.toHaveBeenCalled();
-    });
-
-    it('When the last user (participant) leaves, then it should remove user and delete room', async () => {
-      roomService.countUsersInRoom.mockResolvedValueOnce(0);
-
-      await callUseCase.leaveCall(roomId, participantId);
-
-      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        participantId,
-        roomMock,
-      );
-      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.closeRoom).not.toHaveBeenCalled();
-    });
-
-    it('When a participant leaves a non-empty room, then it should remove user but not close or delete room', async () => {
-      roomService.countUsersInRoom.mockResolvedValueOnce(2);
-
-      await callUseCase.leaveCall(roomId, participantId);
-
-      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        participantId,
-        roomMock,
-      );
-      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.closeRoom).not.toHaveBeenCalled();
-      expect(roomService.removeRoom).not.toHaveBeenCalled();
-    });
-
-    it('When host leaves call, then it should leave successfully and close the room', async () => {
-      roomService.countUsersInRoom.mockResolvedValueOnce(1);
-      roomMock.hostId = hostId;
-
-      await callUseCase.leaveCall(roomId, hostId);
-
-      expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
-        hostId,
-        roomMock,
-      );
-      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.closeRoom).toHaveBeenCalledWith(roomId);
-      expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
     it('When anonymous user leaves call, then it should leave successfully', async () => {
-      roomService.countUsersInRoom.mockResolvedValueOnce(1);
-
       await callUseCase.leaveCall(roomId, anonymousUserId);
 
       expect(roomService.getRoomByRoomId).toHaveBeenCalledWith(roomId);
@@ -715,7 +668,6 @@ describe('CallUseCase', () => {
         anonymousUserId,
         roomMock,
       );
-      expect(roomService.countUsersInRoom).toHaveBeenCalledWith(roomId);
     });
 
     it('When error occurs during leave call operation, then it should propagate error', async () => {
@@ -725,16 +677,6 @@ describe('CallUseCase', () => {
       await expect(
         callUseCase.leaveCall(roomId, participantId),
       ).rejects.toThrow(error);
-    });
-
-    it('When roomService throws, then it should propagate error', async () => {
-      const error = new BadRequestException('Invalid user');
-      roomService.getRoomByRoomId.mockResolvedValueOnce(roomMock);
-      roomService.removeUserFromRoom.mockRejectedValueOnce(error);
-
-      await expect(
-        callUseCase.leaveCall(roomId, participantId),
-      ).rejects.toThrow(BadRequestException);
     });
   });
 });

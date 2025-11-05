@@ -46,6 +46,7 @@ export const mockRoomData = {
   createdAt: randomDataGenerator.date(),
   updatedAt: randomDataGenerator.date(),
   removeAt: undefined,
+  scheduled: false,
 };
 
 export const createMockRoom = (attributes?: Partial<Room>): Room => {
@@ -66,6 +67,7 @@ export const mockCallResponse: CreateCallResponseDto = {
   room: mockRoomData.id,
   paxPerCall: mockRoomData.maxUsersAllowed,
   appId: 'testAppId',
+  scheduled: false,
 };
 
 export const createMockCallResponse = (
@@ -130,7 +132,7 @@ export const createMockJitsiWebhookEvent = ({
   roomId?: string;
   appId?: string;
   eventType: JitsiGenericWebHookEvent;
-}): JitsiParticipantJoinedWebHookPayload => {
+}) => {
   const mockParticipantId = participantId ?? randomDataGenerator.guid();
   const mockRoomUserId = roomUserId ?? v4();
   const mockAppId = appId ?? randomDataGenerator.word();
@@ -153,4 +155,47 @@ export const createMockJitsiWebhookEvent = ({
     },
     ...overrides,
   };
+};
+
+export const createMockJitsiParticipantLeftWebhookEvent = ({
+  overrides,
+  participantId,
+  roomUserId,
+  roomId,
+  appId,
+  disconnectReason = 'left',
+}: {
+  overrides?: Partial<JitsiParticipantLeftWebHookPayload>;
+  participantId?: string;
+  roomUserId?: string;
+  roomId?: string;
+  appId?: string;
+  disconnectReason?:
+    | 'left'
+    | 'kicked'
+    | 'unknown'
+    | 'switch_room'
+    | 'unrecoverable_error';
+}): JitsiParticipantLeftWebHookPayload => {
+  const mockParticipantId = participantId ?? randomDataGenerator.guid();
+  const mockRoomUserId = roomUserId ?? v4();
+
+  return createMockJitsiWebhookEvent({
+    eventType: JitsiGenericWebHookEvent.PARTICIPANT_LEFT,
+    participantId: mockParticipantId,
+    roomUserId: mockRoomUserId,
+    roomId,
+    appId,
+    overrides: {
+      data: {
+        moderator: false,
+        name: randomDataGenerator.name(),
+        disconnectReason,
+        id: `${mockParticipantId}/${mockRoomUserId}`,
+        participantJid: randomDataGenerator.guid(),
+        participantId: mockParticipantId,
+      },
+      ...overrides,
+    },
+  }) as JitsiParticipantLeftWebHookPayload;
 };

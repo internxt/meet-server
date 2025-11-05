@@ -31,6 +31,7 @@ export class CallUseCase {
 
   async createCallAndRoom(
     user: User | UserTokenData['payload'],
+    scheduled?: boolean,
   ): Promise<CreateCallResponseDto> {
     const call = await this.callService.createCall(user);
 
@@ -38,11 +39,15 @@ export class CallUseCase {
       id: call.room,
       hostId: user.uuid,
       maxUsersAllowed: call.paxPerCall,
+      scheduled: scheduled ?? false,
     });
 
     await this.roomService.createRoom(newRoom);
 
-    return call;
+    return {
+      ...call,
+      scheduled: scheduled ?? false,
+    };
   }
 
   async getRoomMetadata(roomId: string): Promise<GetCallDataDto> {
@@ -181,16 +186,6 @@ export class CallUseCase {
       throw new NotFoundException(`Specified room not found`);
     }
 
-    const isHostLeaving = room.hostId === userId;
-
     await this.roomService.removeUserFromRoom(userId, room);
-
-    const remainingUsers = await this.roomService.countUsersInRoom(roomId);
-
-    if (remainingUsers === 0) {
-      await this.roomService.removeRoom(roomId);
-    } else if (isHostLeaving) {
-      await this.roomService.closeRoom(roomId);
-    }
   }
 }

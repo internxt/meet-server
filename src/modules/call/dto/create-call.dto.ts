@@ -1,4 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional } from 'class-validator';
+
+export class CreateCallRequestDto {
+  @ApiPropertyOptional({
+    description: 'Whether the call is scheduled for later',
+    type: Boolean,
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  scheduled?: boolean;
+}
 
 export class CreateCallResponseDto {
   @ApiProperty({
@@ -19,4 +31,11 @@ export class CreateCallResponseDto {
     example: 'vpaaS-magic-cookie-b6c3adeead3f12f2bdb7e123123123e8',
   })
   appId: string;
+
+  @ApiProperty({
+    description: 'Whether the call is scheduled for later',
+    type: Boolean,
+    example: false,
+  })
+  scheduled: boolean;
 }

@@ -1,6 +1,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { getModelToken } from '@nestjs/sequelize';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Op } from 'sequelize';
 import { RoomUser } from '../domain/room-user.domain';
 import { RoomUserModel } from '../models/room-user.model';
 import { SequelizeRoomUserRepository } from './room-user.repository';
@@ -228,6 +229,34 @@ describe('SequelizeRoomUserRepository', () => {
           roomId: 'test-room-id',
         },
       });
+    });
+  });
+
+  describe('destroyParticipantWithOlderTimestamp', () => {
+    it('When called, then it should call the model with respective parameters and return the affected rows', async () => {
+      const roomUserId = v4();
+      const participantId = v4();
+      const maxTimestamp = new Date('2024-01-01T12:00:00Z');
+
+      const destroySpy = jest
+        .spyOn(roomUserModel, 'destroy')
+        .mockResolvedValueOnce(1);
+
+      const result = await repository.destroyParticipantWithOlderTimestamp(
+        roomUserId,
+        participantId,
+        maxTimestamp,
+      );
+
+      expect(destroySpy).toHaveBeenCalledWith({
+        where: {
+          id: roomUserId,
+          participantId,
+          joinedAt: { [Op.lte]: maxTimestamp },
+        },
+        transaction: undefined,
+      });
+      expect(result).toBe(1);
     });
   });
 });
