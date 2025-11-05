@@ -34,19 +34,27 @@ export class CallUseCase {
     scheduled?: boolean,
   ): Promise<CreateCallResponseDto> {
     const call = await this.callService.createCall(user);
-
+    const scheduledCall = scheduled ?? false;
     const newRoom = new Room({
       id: call.room,
       hostId: user.uuid,
       maxUsersAllowed: call.paxPerCall,
-      scheduled: scheduled ?? false,
+      scheduled: scheduledCall,
     });
+
+    const totalActiveCalls = await this.roomService.getUserOwnedRoomsNumber(
+      user.uuid,
+      scheduledCall,
+    );
+    if (totalActiveCalls >= 50) {
+      await this.roomService.removeOldestRoom(user.uuid, scheduledCall);
+    }
 
     await this.roomService.createRoom(newRoom);
 
     return {
       ...call,
-      scheduled: scheduled ?? false,
+      scheduled: scheduledCall,
     };
   }
 
