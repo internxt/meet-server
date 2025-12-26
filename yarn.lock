@@ -1093,10 +1093,10 @@
     "@eslint/core" "^0.15.2"
     levn "^0.4.1"
 
-"@golevelup/ts-jest@^0.6.2":
-  version "0.6.2"
-  resolved "https://registry.yarnpkg.com/@golevelup/ts-jest/-/ts-jest-0.6.2.tgz#483a482e1ab5a835cdd0f8669f76d1201c4a0f63"
-  integrity sha512-ks82vcWbnRuwHSKlrZTGCPPWXZEKlsn1VA2OiYfJ+tVMcMsI4y9ExWkf7FnmYypYJIRWKS9b9N5QVVrCOmaVlg==
+"@golevelup/ts-jest@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@golevelup/ts-jest/-/ts-jest-1.1.1.tgz#6cb4b902e4d3249112f3a3aa431328b5c9f39617"
+  integrity sha512-F5MKhEoNWDHK3YBTKnViBjWijHeDMS/5d4Pug/DCI5UWSqfCg5oGCve2W+/WM0x/hhUM9GedDT3ztHHwbIYjQA==
 
 "@humanfs/core@^0.19.1":
   version "0.19.1"
