@@ -96,7 +96,7 @@ describe('Testing Call Endpoints', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('When an unexpected error occurs, then an error indicating so is thrown', async () => {
+    it('When an unexpected error occurs, then the error propagates to the global exception filter', async () => {
       const mockUserToken = createMockUserToken();
 
       callUseCase.createCallAndRoom.mockRejectedValueOnce(
@@ -105,7 +105,7 @@ describe('Testing Call Endpoints', () => {
 
       await expect(
         callController.createCall(mockUserToken.payload),
-      ).rejects.toThrow(InternalServerErrorException);
+      ).rejects.toThrow('Unexpected error');
     });
   });
 
