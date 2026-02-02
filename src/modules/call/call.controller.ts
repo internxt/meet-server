@@ -4,8 +4,6 @@ import {
   Controller,
   Get,
   HttpCode,
-  HttpException,
-  InternalServerErrorException,
   Logger,
   Param,
   Post,
@@ -77,32 +75,7 @@ export class CallController {
       throw new BadRequestException('The user id is needed to create a call');
     }
 
-    try {
-      const call = await this.callUseCase.createCallAndRoom(
-        user,
-        createCallDto?.scheduled,
-      );
-      return call;
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(
-        {
-          userId: uuid,
-          email: email,
-          err,
-        },
-        'Failed to create a call and room',
-      );
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'An unexpected error occurred while creating the call',
-        { cause: err.message },
-      );
-    }
+    return this.callUseCase.createCallAndRoom(user, createCallDto?.scheduled);
   }
 
   @Post('/:id/users/join')

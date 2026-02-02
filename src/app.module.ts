@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { Logger, Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { CallModule } from './modules/call/call.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
@@ -7,6 +8,7 @@ import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { format } from 'sql-formatter';
 import { SharedModule } from './shared/shared.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { HttpGlobalExceptionFilter } from './common/http-exception-filter';
 
 const defaultDbConfig = (
   configService: ConfigService,
@@ -79,5 +81,11 @@ const defaultDbConfig = (
     SharedModule,
   ],
   controllers: [],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: HttpGlobalExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}
