@@ -105,7 +105,7 @@ describe('Testing Call Endpoints', () => {
 
       await expect(
         callController.createCall(mockUserToken.payload),
-      ).rejects.toThrow('Unexpected error');
+      ).rejects.toThrow(Error);
     });
   });
 

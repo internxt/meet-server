@@ -31,6 +31,7 @@ export class HttpGlobalExceptionFilter extends BaseExceptionFilter {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<RequestWithUser>();
     const response = ctx.getResponse<Response>();
+    const requestId = request.id;
 
     try {
       if (exception instanceof HttpException) {
@@ -42,13 +43,11 @@ export class HttpGlobalExceptionFilter extends BaseExceptionFilter {
         const message =
           typeof res === 'object' && res !== null
             ? res
-            : { statusCode: status, message: res };
+            : { statusCode: status, message: res, requestId };
 
         httpAdapter.reply(response, message, status);
         return;
       }
-
-      const requestId = request.id;
 
       const error =
         exception instanceof Error ? exception : new Error('Unknown error');
