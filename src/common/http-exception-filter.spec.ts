@@ -79,7 +79,11 @@ describe('HttpGlobalExceptionFilter', () => {
 
       expect(mockHttpAdapter.reply).toHaveBeenCalledWith(
         expect.anything(),
-        { statusCode: HttpStatus.BAD_REQUEST, message: 'Bad Request' },
+        {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Bad Request',
+          requestId,
+        },
         HttpStatus.BAD_REQUEST,
       );
       expect(loggerMock.warn).toHaveBeenCalled();
@@ -140,6 +144,7 @@ describe('HttpGlobalExceptionFilter', () => {
         {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'Something broke',
+          requestId,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
