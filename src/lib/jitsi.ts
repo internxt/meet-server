@@ -1,6 +1,8 @@
 import { JwtHeader } from 'jsonwebtoken';
-import { v4 } from 'uuid';
 import configuration from '../config/configuration';
+
+const JITSI_JWT_EXPIRATION_TIME = 300; // 5 minutes
+const JITSI_ADMIN_JWT_EXPIRATION_TIME = 60; // 1 minute
 
 export const getJitsiJWTSecret = () => {
   const jitsiSecret = configuration().secrets.jitsiSecret;
@@ -18,7 +20,7 @@ export const getJitsiJWTPayload = (
   room: string,
   moderator: boolean,
 ) => {
-  const now = Math.round(new Date().getTime() / 1000);
+  const now = Math.round(Date.now() / 1000);
   const appId = configuration().jitsi.appId;
   const userContextId = user.id + '/' + user.userRoomId;
 
@@ -42,7 +44,7 @@ export const getJitsiJWTPayload = (
     iss: 'chat',
     sub: appId,
     room: room,
-    exp: now + 60,
+    exp: now + JITSI_JWT_EXPIRATION_TIME,
     nbf: now - 10,
     iat: now,
   };
@@ -58,12 +60,12 @@ export const getJitsiJWTHeader = () => {
 };
 
 export const getJitsiAdminJWTPayload = () => {
-  const now = Math.round(new Date().getTime() / 1000);
+  const now = Math.round(Date.now() / 1000);
   const appId = configuration().jitsi.appId;
 
   return {
     aud: 'jitsi',
-    exp: now + 600, // 1 minute expiration
+    exp: now + JITSI_ADMIN_JWT_EXPIRATION_TIME,
     iss: 'chat',
     admin: true, // Required for conference management endpoints
     sub: appId,
