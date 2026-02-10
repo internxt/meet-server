@@ -2,53 +2,58 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Sequelize } from 'sequelize-typescript';
 import { AvatarService } from '../../externals/avatar/avatar.service';
 
+type CheckResult = { status: 'ok' | 'error' | 'unknown'; ping?: number; error?: string };
+type HealthPayload = {
+  status: 'ok' | 'degraded';
+  uptime: number;
+  timestamp: string;
+  db?: CheckResult;
+  s3?: CheckResult;
+};
+
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
 
   constructor(
-    private readonly sequelize: Sequelize, 
-    private readonly avatarService: AvatarService
+    private readonly sequelize: Sequelize,
+    private readonly avatarService: AvatarService,
   ) {}
 
-  async check() {
-    const uptime = process.uptime();
-    const timestamp = new Date().toISOString();
+  private async checkDb(): Promise<CheckResult> {
+    const start = Date.now();
+    await this.sequelize.authenticate();
+    return { status: 'ok', ping: Date.now() - start };
+  }
 
-    const payload: { status: string, uptime: number, timestamp: string } = {
+  async check(): Promise<HealthPayload> {
+    const payload: HealthPayload = {
       status: 'ok',
-      uptime,
-      timestamp,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
     };
 
-    const checks: Array<Promise<any>> = [];
-    const checkNames: string[] = [];
+    const checks = {
+      db: this.checkDb(),
+      s3: this.avatarService.checkBucket(),
+    } as const;
 
-    checkNames.push('db');
-    const dbPromise = (async () => {
-        const start = Date.now();
-        await this.sequelize.authenticate();
-        return { status: 'ok', ping: Date.now() - start };
-    })();
-    checks.push(dbPromise);
+    const results = await Promise.allSettled(
+      Object.entries(checks).map(async ([name, promise]) => {
+        const value = await promise;
+        return [name, value] as const;
+      }),
+    );
 
-    checkNames.push('s3');
-    checks.push(this.avatarService.checkBucket());
-
-    const results = await Promise.allSettled(checks);
-
-    results.forEach((r, idx) => {
-      const name = checkNames[idx];
+    for (const r of results) {
       if (r.status === 'fulfilled') {
-        payload[name] = r.value;
-        if (r.value?.status !== 'ok' && payload.status === 'ok') {
-          payload.status = 'degraded';
-        }
+        const [name, value] = r.value;
+        payload[name] = value;
+        if (value.status !== 'ok') payload.status = 'degraded';
       } else {
-        payload[name] = { status: 'error', error: r.reason?.message || String(r.reason) };
-        if (payload.status === 'ok') payload.status = 'degraded';
+        payload.status = 'degraded';
       }
-    });
+    }
 
     this.logger.debug(`Health check performed: ${JSON.stringify(payload)}`);
     return payload;
