@@ -2,6 +2,7 @@
 import { Logger, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { CallModule } from './modules/call/call.module';
+import { HealthModule } from './modules/health/health.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
@@ -79,6 +80,7 @@ const defaultDbConfig = (
     }),
     CallModule,
     SharedModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [
