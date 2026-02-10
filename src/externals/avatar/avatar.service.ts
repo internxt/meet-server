@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -22,6 +22,26 @@ export class AvatarService {
       forcePathStyle:
         this.configService.get('avatar.forcePathStyle') === 'true',
     });
+  }
+
+  async checkBucket(timeoutMs = 1000) {
+    const bucket = this.configService.get<string>('avatar.bucket');
+    const client = this.AvatarS3Instance();
+    const start = Date.now();
+    const head = client.send(
+      new HeadBucketCommand({ Bucket: bucket })
+    );
+
+    const timer = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), timeoutMs),
+    );
+
+    try {
+      await Promise.race([head, timer]);
+      return { status: 'ok', ping: Date.now() - start };
+    } catch (err: any) {
+      return { status: 'error', error: err?.message || String(err) };
+    }
   }
 
   async getDownloadUrl(avatarKey: string): Promise<string> {
