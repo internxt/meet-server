@@ -1,8 +1,8 @@
-version: '3.9'
-
 services:
   meet-database:
     image: postgres:15
+    security_opt:
+      - no-new-privileges:true
     container_name: meet-database
     restart: always
     volumes:
@@ -23,6 +23,8 @@ services:
       timeout: 5s
 
   meet-server:
+    security_opt:
+      - no-new-privileges:true
     container_name: meet-server
     build:
       context: .
@@ -46,3 +48,4 @@ services:
 networks:
   internxt:
     name: internxt
+    external: true

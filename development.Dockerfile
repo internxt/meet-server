@@ -1,5 +1,7 @@
 FROM node:22.13.1
 
+RUN groupadd -r nodeuser && useradd -r -g nodeuser nodeuser
+USER nodeuser
 WORKDIR /usr/app
 
 COPY package.json ./
