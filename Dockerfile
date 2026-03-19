@@ -10,7 +10,7 @@ COPY package.json ./
 COPY yarn.lock ./
 
 RUN yarn
-COPY . ./
+COPY --chown=nodeuser:nodeuser . ./
 
 RUN yarn build
 
