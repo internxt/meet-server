@@ -1,14 +1,14 @@
 FROM node:22.17.0
 
-RUN groupadd -g 1234 -r nodeuser && useradd  -u 1234 -r -g nodeuser nodeuser
-USER nodeuser
+USER 1234:1234
+
 WORKDIR /usr/app
 
 COPY package.json ./
 COPY yarn.lock ./
 
 RUN yarn
-COPY --chown=nodeuser:nodeuser . ./
+COPY --chown=1234:1234 . ./
 
 RUN rm -rf dist && yarn build
 
