@@ -202,7 +202,7 @@ describe('JitsiWebhookService', () => {
 
     beforeEach(() => {
       jest.useFakeTimers();
-      jest.setSystemTime(currentDate);
+      jest.setSystemTime(currentDate.getTime());
       sequelize.transaction.mockImplementation((callback: any) => {
         const mockTransaction = {};
         return callback(mockTransaction);
