@@ -376,7 +376,7 @@ describe('CallUseCase', () => {
         removeAt: pastDate,
       };
       jest.useFakeTimers();
-      jest.setSystemTime(currentDate);
+      jest.setSystemTime(currentDate.getTime());
 
       roomService.getRoomByRoomId.mockResolvedValueOnce(expiredRoomMock);
       roomService.removeRoom.mockResolvedValueOnce(undefined);
@@ -401,7 +401,7 @@ describe('CallUseCase', () => {
         removeAt: futureDate,
       };
       jest.useFakeTimers();
-      jest.setSystemTime(currentDate);
+      jest.setSystemTime(currentDate.getTime());
       roomService.getRoomByRoomId.mockResolvedValueOnce(nonExpiredRoomMock);
       roomService.getUserInRoom.mockResolvedValueOnce(null);
       roomService.countUsersInRoom.mockResolvedValueOnce(0);
@@ -659,7 +659,7 @@ describe('CallUseCase', () => {
       });
 
       jest.useFakeTimers();
-      jest.setSystemTime(currentDate);
+      jest.setSystemTime(currentDate.getTime());
 
       roomService.getRoomByRoomId.mockResolvedValueOnce(expiredRoomMock);
 
