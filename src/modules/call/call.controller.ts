@@ -181,6 +181,6 @@ export class CallController {
       this.logger.warn('Attempt to leave call without user ID:', leaveCallDto);
       throw new BadRequestException('The user id is needed to leave the call');
     }
-    return this.callUseCase.leaveCall(roomId, leaveCallDto?.userId);
+    return this.callUseCase.leaveCall(roomId, leaveCallDto.userId);
   }
 }
