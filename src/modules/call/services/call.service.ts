@@ -71,7 +71,7 @@ export class CallService {
   }
 
   async createCall(user: User | UserTokenData['payload']) {
-   const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
+    const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
 
     if (!meetFeatures.enabled)
       throw new UnauthorizedException(

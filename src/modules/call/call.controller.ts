@@ -179,7 +179,7 @@ export class CallController {
   ): Promise<void> {
     if (leaveCallDto?.userId) {
       this.logger.warn(
-        `Attempt to create leave call without ID for user: ${leaveCallDto}`,
+        `Attempt to leave call without user ID: ${leaveCallDto}`,
       );
       throw new BadRequestException('The user id is needed to leave the call');
     }
