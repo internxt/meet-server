@@ -95,6 +95,13 @@ export class SequelizeRoomUserRepository {
     return roomUser ? RoomUser.build(roomUser) : null;
   }
 
+  async deleteByParticipantIdAndRoomId(
+    participantId: string,
+    roomId: string,
+  ): Promise<void> {
+    await this.roomUserModel.destroy({ where: { participantId, roomId } });
+  }
+
   async destroyParticipantWithOlderTimestamp(
     roomUserId: string,
     participantId: string,
