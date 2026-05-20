@@ -48,7 +48,7 @@ export class CallService {
   private async getMeetFeatureConfigForUser(
     userUuid: string,
   ): Promise<Tier['featuresPerService']['meet']> {
-    const isProduction = this.configService.get<boolean>('isProduction')
+    const isProduction = this.configService.get<boolean>('isProduction');
     if (!isProduction) {
       return {
         enabled: true,
