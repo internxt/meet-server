@@ -182,7 +182,7 @@ export class CallUseCase {
     return {
       token: callTokenData,
       room: roomId,
-      userId: roomUser.userId,
+      userId: roomUser.id,
       appId: this.configService.get<string>('jitsi.appId'),
     };
   }

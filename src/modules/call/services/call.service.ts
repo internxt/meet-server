@@ -48,6 +48,13 @@ export class CallService {
   private async getMeetFeatureConfigForUser(
     userUuid: string,
   ): Promise<Tier['featuresPerService']['meet']> {
+    const isProduction = this.configService.get<boolean>('isProduction')
+    if (!isProduction) {
+      return {
+        enabled: true,
+        paxPerCall: 10,
+      };
+    }
     const userFeatures = await this.paymentService
       .getUserTier(userUuid)
       .catch((err) => {
@@ -64,7 +71,7 @@ export class CallService {
   }
 
   async createCall(user: User | UserTokenData['payload']) {
-    const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
+   const meetFeatures = await this.getMeetFeatureConfigForUser(user.uuid);
 
     if (!meetFeatures.enabled)
       throw new UnauthorizedException(

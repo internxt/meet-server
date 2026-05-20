@@ -175,10 +175,14 @@ export class CallController {
   @ApiInternalServerErrorResponse({ description: 'Internal server error' })
   leaveCall(
     @Param('id') roomId: string,
-    @User() user: UserTokenData['payload'],
     @Body() leaveCallDto?: LeaveCallDto,
   ): Promise<void> {
-    const { uuid } = user || {};
-    return this.callUseCase.leaveCall(roomId, uuid || leaveCallDto?.userId);
+    if (leaveCallDto?.userId) {
+      this.logger.warn(
+        `Attempt to create leave call without ID for user: ${leaveCallDto}`,
+      );
+      throw new BadRequestException('The user id is needed to leave the call');
+    }
+    return this.callUseCase.leaveCall(roomId, leaveCallDto?.userId);
   }
 }

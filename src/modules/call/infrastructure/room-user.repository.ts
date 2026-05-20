@@ -82,7 +82,7 @@ export class SequelizeRoomUserRepository {
   }
 
   async deleteByUserIdAndRoomId(userId: string, roomId: string): Promise<void> {
-    await this.roomUserModel.destroy({ where: { userId, roomId } });
+    await this.roomUserModel.destroy({ where: { id: userId, roomId } });
   }
 
   async findByParticipantIdAndRoomId(
@@ -93,13 +93,6 @@ export class SequelizeRoomUserRepository {
       where: { participantId, roomId },
     });
     return roomUser ? RoomUser.build(roomUser) : null;
-  }
-
-  async deleteByParticipantIdAndRoomId(
-    participantId: string,
-    roomId: string,
-  ): Promise<void> {
-    await this.roomUserModel.destroy({ where: { participantId, roomId } });
   }
 
   async destroyParticipantWithOlderTimestamp(

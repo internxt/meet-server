@@ -157,22 +157,10 @@ export class RoomService {
         { transaction, lock: true },
       );
 
-      if (existingUser) {
-        if (existingUser.participantId) {
+      if (existingUser?.participantId) {
           oldParticipantId = existingUser.participantId;
-        }
+      }
 
-        await this.roomUserRepository.update(
-          existingUser.id,
-          {
-            participantId: null,
-            joinedAt: null,
-          },
-          transaction,
-        );
-
-        roomUser = existingUser;
-      } else {
         roomUser = await this.roomUserRepository.create(
           {
             roomId,
@@ -183,7 +171,6 @@ export class RoomService {
           },
           transaction,
         );
-      }
     });
 
     return { roomUser, oldParticipantId };
