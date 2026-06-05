@@ -210,7 +210,13 @@ export class JitsiWebhookService {
       }
 
       this.logger.log(
-        { userId, roomId, removedRoomUsers: deletedRows },
+        {
+          userId,
+          roomId,
+          removedRoomUsers: deletedRows,
+          room,
+          isOwner: userId === room.hostId,
+        },
         'Successfully processed PARTICIPANT_LEFT event',
       );
     } catch (error: unknown) {
