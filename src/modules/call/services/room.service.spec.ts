@@ -13,6 +13,8 @@ import {
   createMockRoom,
 } from '../fixtures';
 import { v4 } from 'uuid';
+import { RoomUser } from '../domain/room-user.domain';
+import { Sequelize } from 'sequelize-typescript';
 
 describe('Room Service', () => {
   let roomService: RoomService;
@@ -21,6 +23,7 @@ describe('Room Service', () => {
   let userRepository: UserRepository;
   let avatarService: AvatarService;
   let moduleRef: TestingModule;
+  let sequelize: Sequelize;
 
   beforeEach(async () => {
     moduleRef = await Test.createTestingModule({
@@ -38,6 +41,7 @@ describe('Room Service', () => {
     );
     userRepository = moduleRef.get<UserRepository>(UserRepository);
     avatarService = moduleRef.get<AvatarService>(AvatarService);
+    sequelize = moduleRef.get<Sequelize>(Sequelize);
   });
 
   describe('Creating a room', () => {
@@ -440,6 +444,55 @@ describe('Room Service', () => {
         false,
       );
       expect(roomRepository.delete).toHaveBeenCalledWith(mockRoom.id);
+    });
+  });
+
+  describe('handleUserJoined', () => {
+    it('When new non-anonymous user joins, then it should create new entry in the data base', async () => {
+      const userUuid = v4();
+      const roomId = v4();
+      const userData = new RoomUser({
+        name: 'John',
+        lastName: 'Doe',
+        anonymous: false,
+        id: v4(),
+        roomId,
+        userId: userUuid,
+      });
+      jest
+        .spyOn(sequelize, 'transaction')
+        .mockImplementation(async (cb: any) => {
+          return cb({} as any);
+        });
+
+      jest
+        .spyOn(roomUserRepository, 'findByUserIdAndRoomId')
+        .mockResolvedValueOnce(null);
+      jest.spyOn(roomUserRepository, 'create').mockResolvedValueOnce(userData);
+
+      const { roomUser, oldParticipantId } = await roomService.handleUserJoined(userUuid, roomId, {
+        name: 'John',
+        lastName: 'Doe',
+        anonymous: false,
+      });
+
+      expect(oldParticipantId).toBeUndefined();
+      expect(roomUser).toEqual(userData);
+      expect(roomUserRepository.findByUserIdAndRoomId).toHaveBeenCalledWith(
+        userUuid,
+        roomId,
+        { transaction: {}, lock: true },
+      );
+      expect(roomUserRepository.create).toHaveBeenCalledWith(
+        {
+          userId: userUuid,
+          roomId: roomId,
+          name: 'John',
+          lastName: 'Doe',
+          anonymous: false,
+        },
+        {},
+      );
     });
   });
 });

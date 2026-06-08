@@ -158,19 +158,19 @@ export class RoomService {
       );
 
       if (existingUser?.participantId) {
-          oldParticipantId = existingUser.participantId;
+        oldParticipantId = existingUser.participantId;
       }
 
-        roomUser = await this.roomUserRepository.create(
-          {
-            roomId,
-            userId,
-            name: userData.name,
-            lastName: userData.lastName,
-            anonymous: Boolean(userData.anonymous),
-          },
-          transaction,
-        );
+      roomUser = await this.roomUserRepository.create(
+        {
+          roomId,
+          userId,
+          name: userData.name,
+          lastName: userData.lastName,
+          anonymous: Boolean(userData.anonymous),
+        },
+        transaction,
+      );
     });
 
     return { roomUser, oldParticipantId };
