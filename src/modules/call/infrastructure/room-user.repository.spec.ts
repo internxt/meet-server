@@ -225,7 +225,7 @@ describe('SequelizeRoomUserRepository', () => {
 
       expect(deleteRoomUserSpy).toHaveBeenCalledWith({
         where: {
-          userId: 'test-user-id',
+          id: 'test-user-id',
           roomId: 'test-room-id',
         },
       });

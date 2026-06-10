@@ -86,4 +86,21 @@ describe('Call service', () => {
 
     expect(paymentService.getUserTier).toHaveBeenCalledWith(userPayload.uuid);
   });
+
+   it('When the user has meet enabled and isDevelopment, then a call should be created without calling payment service', async () => {
+    jest.spyOn(configService, 'get').mockReturnValueOnce(false);
+    const userPayload = mockUserPayload;
+    (uuid.v4 as jest.Mock).mockReturnValue('test-room-id');
+    (jwt.sign as jest.Mock).mockReturnValue('test-jitsi-token');
+
+    const result = await callService.createCall(userPayload);
+
+    expect(result).toEqual({
+      appId: 'jitsi-app-id',
+      room: 'test-room-id',
+      paxPerCall: 10,
+    });
+
+    expect(paymentService.getUserTier).not.toHaveBeenCalled();
+  });
 });

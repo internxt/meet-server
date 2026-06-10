@@ -157,33 +157,20 @@ export class RoomService {
         { transaction, lock: true },
       );
 
-      if (existingUser) {
-        if (existingUser.participantId) {
-          oldParticipantId = existingUser.participantId;
-        }
-
-        await this.roomUserRepository.update(
-          existingUser.id,
-          {
-            participantId: null,
-            joinedAt: null,
-          },
-          transaction,
-        );
-
-        roomUser = existingUser;
-      } else {
-        roomUser = await this.roomUserRepository.create(
-          {
-            roomId,
-            userId,
-            name: userData.name,
-            lastName: userData.lastName,
-            anonymous: Boolean(userData.anonymous),
-          },
-          transaction,
-        );
+      if (existingUser?.participantId) {
+        oldParticipantId = existingUser.participantId;
       }
+
+      roomUser = await this.roomUserRepository.create(
+        {
+          roomId,
+          userId,
+          name: userData.name,
+          lastName: userData.lastName,
+          anonymous: Boolean(userData.anonymous),
+        },
+        transaction,
+      );
     });
 
     return { roomUser, oldParticipantId };

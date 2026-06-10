@@ -316,11 +316,10 @@ describe('Testing Call Endpoints', () => {
   describe('Leaving a call', () => {
     it('When leaving a call for authenticated user, then it should leave successfully', async () => {
       callUseCase.leaveCall.mockResolvedValue();
+      const leaveCallDto = new LeaveCallDto();
+      leaveCallDto.userId = mockUserPayload.uuid;
 
-      const result = await callController.leaveCall(
-        mockRoomId,
-        mockUserPayload,
-      );
+      const result = await callController.leaveCall(mockRoomId, leaveCallDto);
 
       expect(result).toBeUndefined();
       expect(callUseCase.leaveCall).toHaveBeenCalledWith(
@@ -336,7 +335,7 @@ describe('Testing Call Endpoints', () => {
 
       callUseCase.leaveCall.mockResolvedValue();
 
-      await callController.leaveCall(mockRoomId, null, leaveCallDto);
+      await callController.leaveCall(mockRoomId, leaveCallDto);
 
       expect(callUseCase.leaveCall).toHaveBeenCalledWith(
         mockRoomId,
@@ -350,16 +349,11 @@ describe('Testing Call Endpoints', () => {
 
       callUseCase.leaveCall.mockResolvedValue();
 
-      const userToken = createMockUserToken();
-      await callController.leaveCall(
-        mockRoomId,
-        userToken.payload,
-        leaveCallDto,
-      );
+      await callController.leaveCall(mockRoomId, leaveCallDto);
 
       expect(callUseCase.leaveCall).toHaveBeenCalledWith(
         mockRoomId,
-        userToken.payload.uuid,
+        'anonymous-user-id',
       );
     });
 
@@ -367,20 +361,22 @@ describe('Testing Call Endpoints', () => {
       const emptyDto = new LeaveCallDto();
       callUseCase.leaveCall.mockResolvedValue();
 
-      await callController.leaveCall(mockRoomId, null, emptyDto);
-
-      expect(callUseCase.leaveCall).toHaveBeenCalledWith(mockRoomId, undefined);
+      await expect(
+        callController.leaveCall(mockRoomId, emptyDto),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('When room is not found, then it should propagate NotFoundException', async () => {
-      const userToken = createMockUserToken();
+      const anonymousUserId = 'anonymous-user-id';
+      const leaveCallDto = new LeaveCallDto();
+      leaveCallDto.userId = anonymousUserId;
 
       callUseCase.leaveCall.mockRejectedValue(
         new NotFoundException('Specified room not found'),
       );
 
       await expect(
-        callController.leaveCall(mockRoomId, userToken.payload),
+        callController.leaveCall(mockRoomId, leaveCallDto),
       ).rejects.toThrow(NotFoundException);
     });
 
