@@ -34,6 +34,7 @@ export default () => ({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
+    caCert: process.env.DB_CA_CERT,
   },
   driveDatabase: {
     host: process.env.DRIVE_DB_HOSTNAME,
@@ -42,6 +43,7 @@ export default () => ({
     username: process.env.DRIVE_DB_USERNAME,
     password: process.env.DRIVE_DB_PASSWORD,
     database: process.env.DRIVE_DB_NAME,
+    caCert: process.env.DRIVE_DB_CA_CERT,
   },
   avatar: {
     accessKey: process.env.AVATAR_ACCESS_KEY,

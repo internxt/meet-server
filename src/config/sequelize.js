@@ -1,3 +1,13 @@
+function getDbCaCert() {
+  const encodedCert = process.env.DB_CA_CERT;
+
+  if (!encodedCert) {
+    return undefined;
+  }
+
+  return Buffer.from(encodedCert, 'base64').toString('utf8');
+}
+
 module.exports = {
   development: {
     dialect: 'postgres',
@@ -51,7 +61,8 @@ module.exports = {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,
+        ca: getDbCaCert(),
       },
     },
   },
