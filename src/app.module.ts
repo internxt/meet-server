@@ -7,12 +7,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { format } from 'sql-formatter';
+import { decodeDbCaCert } from './config/db-ca-cert';
 import { SharedModule } from './shared/shared.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { HttpGlobalExceptionFilter } from './common/http-exception-filter';
 
 const defaultDbConfig = (
   configService: ConfigService,
+  caCertConfigKey: 'database.caCert' | 'driveDatabase.caCert',
 ): SequelizeModuleOptions => ({
   dialect: 'postgres' as const,
   autoLoadModels: true,
@@ -27,7 +29,8 @@ const defaultDbConfig = (
     ? {
         ssl: {
           require: true,
-          rejectUnauthorized: false,
+          rejectUnauthorized: true,
+          ca: decodeDbCaCert(configService.get<string>(caCertConfigKey)),
         },
         application_name: 'meet-server',
       }
@@ -62,7 +65,7 @@ const defaultDbConfig = (
         username: configService.get('database.username'),
         password: configService.get('database.password'),
         database: configService.get('database.database'),
-        ...defaultDbConfig(configService),
+        ...defaultDbConfig(configService, 'database.caCert'),
       }),
     }),
     SequelizeModule.forRootAsync({
@@ -75,7 +78,7 @@ const defaultDbConfig = (
         username: configService.get('driveDatabase.username'),
         password: configService.get('driveDatabase.password'),
         database: configService.get('driveDatabase.database'),
-        ...defaultDbConfig(configService),
+        ...defaultDbConfig(configService, 'driveDatabase.caCert'),
       }),
     }),
     CallModule,
