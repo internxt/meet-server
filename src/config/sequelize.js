@@ -1,11 +1,11 @@
 function getDbCaCert() {
-  const rawCert = process.env.DB_CA_CERT;
+  const encodedCert = process.env.DB_CA_CERT;
 
-  if (!rawCert) {
+  if (!encodedCert) {
     return undefined;
   }
 
-  return rawCert.includes('\\n') ? rawCert.replace(/\\n/g, '\n') : rawCert;
+  return Buffer.from(encodedCert, 'base64').toString('utf8');
 }
 
 module.exports = {
