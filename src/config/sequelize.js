@@ -1,3 +1,13 @@
+function getDbCaCert() {
+  const rawCert = process.env.DB_CA_CERT;
+
+  if (!rawCert) {
+    return undefined;
+  }
+
+  return rawCert.includes('\\n') ? rawCert.replace(/\\n/g, '\n') : rawCert;
+}
+
 module.exports = {
   development: {
     dialect: 'postgres',
@@ -51,7 +61,8 @@ module.exports = {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,
+        ca: getDbCaCert(),
       },
     },
   },
