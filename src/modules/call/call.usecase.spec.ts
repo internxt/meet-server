@@ -492,6 +492,21 @@ describe('CallUseCase', () => {
       );
       expect(result.userId).toEqual(roomUserMock.id);
     });
+
+    it('When an anonymous user supplies the host uuid and the room is closed, then it should not reopen it', async () => {
+      const closedRoomMock = { ...roomMock, isClosed: true } as Room;
+      roomService.getRoomByRoomId.mockResolvedValueOnce(closedRoomMock);
+
+      await expect(
+        callUseCase.joinCall(roomId, {
+          name: 'Impostor',
+          anonymous: true,
+          anonymousId: closedRoomMock.hostId,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(roomService.openRoom).not.toHaveBeenCalled();
+    });
   });
 
   describe('processUserData', () => {
