@@ -306,6 +306,92 @@ describe('Room Service', () => {
     });
   });
 
+  describe('getRoomUser', () => {
+    it('When id belongs to the room, then it should return it', async () => {
+      const roomId = mockRoomData.id;
+      const mockRoomUser = createMockRoomUser({ roomId });
+
+      jest
+        .spyOn(roomUserRepository, 'findById')
+        .mockResolvedValueOnce(mockRoomUser);
+
+      const result = await roomService.getRoomUser(mockRoomUser.id, roomId);
+
+      expect(roomUserRepository.findById).toHaveBeenCalledWith(mockRoomUser.id);
+      expect(result).toEqual(mockRoomUser);
+    });
+
+    it('When id belongs to another room, then it should return null', async () => {
+      const mockRoomUser = createMockRoomUser({ roomId: v4() });
+
+      jest
+        .spyOn(roomUserRepository, 'findById')
+        .mockResolvedValueOnce(mockRoomUser);
+
+      const result = await roomService.getRoomUser(
+        mockRoomUser.id,
+        mockRoomData.id,
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('When id does not exist, then it should return null', async () => {
+      jest.spyOn(roomUserRepository, 'findById').mockResolvedValueOnce(null);
+
+      const result = await roomService.getRoomUser(v4(), mockRoomData.id);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('closeRoomIfHostLeft', () => {
+    it('When the host has no rows left, then it should close the room', async () => {
+      const mockRoom = createMockRoom();
+
+      jest.spyOn(roomUserRepository, 'findUserInRoom').mockResolvedValueOnce([]);
+      jest.spyOn(roomRepository, 'update').mockResolvedValueOnce();
+
+      await roomService.closeRoomIfHostLeft(mockRoom, mockRoom.hostId);
+
+      expect(roomUserRepository.findUserInRoom).toHaveBeenCalledWith(
+        mockRoom.hostId,
+        mockRoom.id,
+      );
+      expect(roomRepository.update).toHaveBeenCalledWith(mockRoom.id, {
+        isClosed: true,
+      });
+    });
+
+    it('When the host still has another connection, then it should not close the room', async () => {
+      const mockRoom = createMockRoom();
+
+      jest
+        .spyOn(roomUserRepository, 'findUserInRoom')
+        .mockResolvedValueOnce([
+          createMockRoomUser({ roomId: mockRoom.id, userId: mockRoom.hostId }),
+        ]);
+      jest.spyOn(roomRepository, 'update').mockResolvedValueOnce();
+
+      await roomService.closeRoomIfHostLeft(mockRoom, mockRoom.hostId);
+
+      expect(roomRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('When a non-host leaves, then it should not query rows nor close the room', async () => {
+      const mockRoom = createMockRoom();
+
+      jest.spyOn(roomUserRepository, 'findUserInRoom')
+        .mockResolvedValueOnce([]);
+      jest.spyOn(roomRepository, 'update').mockResolvedValueOnce();
+
+      await roomService.closeRoomIfHostLeft(mockRoom, v4());
+
+      expect(roomUserRepository.findUserInRoom).not.toHaveBeenCalled();
+      expect(roomRepository.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('countUsersInRoom', () => {
     it('When counting users in room, then it should return the correct count', async () => {
       const expectedCount = 5;
