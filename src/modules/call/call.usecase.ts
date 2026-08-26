@@ -114,17 +114,17 @@ export class CallUseCase {
       throw new GoneException('Room is expired');
     }
 
+    const isAnonymous = userData?.anonymous || !userData?.userId;
+
     const joiningUserData = {
-      userId: userData?.anonymous
-        ? (userData?.anonymousId ?? v4())
-        : userData?.userId,
+      userId: isAnonymous ? (userData?.anonymousId ?? v4()) : userData?.userId,
       name: userData?.name,
       lastName: userData?.lastName,
-      anonymous: userData?.anonymous || !userData.userId,
+      anonymous: isAnonymous,
       email: userData?.email,
     };
 
-    const isOwner = joiningUserData.userId === room.hostId;
+    const isOwner = !isAnonymous && joiningUserData.userId === room.hostId;
 
     if (!isOwner && room.isClosed) {
       throw new ForbiddenException('Room is closed');
@@ -194,6 +194,12 @@ export class CallUseCase {
       throw new NotFoundException(`Specified room not found`);
     }
 
+    const roomUser = await this.roomService.getRoomUser(userId, room.id);
+
     await this.roomService.removeUserFromRoom(userId, room);
+
+    if (roomUser) {
+      await this.roomService.closeRoomIfHostLeft(room, userId);
+    }
   }
 }

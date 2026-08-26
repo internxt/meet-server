@@ -492,6 +492,21 @@ describe('CallUseCase', () => {
       );
       expect(result.userId).toEqual(roomUserMock.id);
     });
+
+    it('When an anonymous user supplies the host uuid and the room is closed, then it should not reopen it', async () => {
+      const closedRoomMock = { ...roomMock, isClosed: true } as Room;
+      roomService.getRoomByRoomId.mockResolvedValueOnce(closedRoomMock);
+
+      await expect(
+        callUseCase.joinCall(roomId, {
+          name: 'Impostor',
+          anonymous: true,
+          anonymousId: closedRoomMock.hostId,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(roomService.openRoom).not.toHaveBeenCalled();
+    });
   });
 
   describe('processUserData', () => {
@@ -571,7 +586,7 @@ describe('CallUseCase', () => {
       );
     });
 
-    it('When user has no userId, then it should handle as anonymous with undefined userId', async () => {
+    it('When user has no userId, then it should handle as anonymous with a generated userId', async () => {
       const roomId = 'test-room-id';
       const name = 'User without ID';
 
@@ -581,10 +596,10 @@ describe('CallUseCase', () => {
       });
       roomService.getRoomByRoomId.mockResolvedValueOnce(openRoomMock);
 
-      const userWithoutId = new RoomUser({
+      const userWithGeneratedId = new RoomUser({
         id: v4(),
         roomId: openRoomMock.id,
-        userId: undefined,
+        userId: v4(),
         name,
         anonymous: true,
       });
@@ -592,7 +607,7 @@ describe('CallUseCase', () => {
       roomService.getUserInRoom.mockResolvedValueOnce(null);
       roomService.countUsersInRoom.mockResolvedValueOnce(0);
       roomService.handleUserJoined.mockResolvedValueOnce({
-        roomUser: userWithoutId,
+        roomUser: userWithGeneratedId,
         oldParticipantId: undefined,
       });
       callService.generateJitsiJWT.mockReturnValueOnce('test-jwt-token');
@@ -602,7 +617,7 @@ describe('CallUseCase', () => {
       });
 
       expect(roomService.handleUserJoined).toHaveBeenCalledWith(
-        undefined,
+        userWithGeneratedId.id,
         openRoomMock.id,
         expect.objectContaining({
           name,

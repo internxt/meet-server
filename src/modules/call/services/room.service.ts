@@ -131,6 +131,26 @@ export class RoomService {
     return existingUser;
   }
 
+  async getRoomUser(roomUserId: string, roomId: string) {
+    const roomUser = await this.roomUserRepository.findById(roomUserId);
+    return roomUser?.roomId === roomId ? roomUser : null;
+  }
+
+  async closeRoomIfHostLeft(room: Room, userId: string): Promise<void> {
+    if (userId !== room.hostId) {
+      return;
+    }
+
+    const remaining = await this.roomUserRepository.findUserInRoom(
+      userId,
+      room.id,
+    );
+
+    if (remaining.length === 0) {
+      await this.closeRoom(room.id);
+    }
+  }
+
   async updateRoomUser(
     roomUserId: string,
     data: Partial<RoomUserAttributes>,
