@@ -81,7 +81,7 @@ export class RoomService {
     const userAvatars = await this.getUserAvatars(users);
 
     return roomUsers.map((roomUser) => ({
-      id: roomUser.id,
+      id: roomUser.userId,
       name: roomUser.name,
       lastName: roomUser.lastName,
       anonymous: roomUser.anonymous,
