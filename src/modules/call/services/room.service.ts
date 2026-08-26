@@ -131,7 +131,7 @@ export class RoomService {
     return existingUser;
   }
 
-  async getRoomUserInRoom(roomUserId: string, roomId: string) {
+  async getRoomUser(roomUserId: string, roomId: string) {
     const roomUser = await this.roomUserRepository.findById(roomUserId);
     return roomUser?.roomId === roomId ? roomUser : null;
   }

@@ -194,7 +194,7 @@ export class CallUseCase {
       throw new NotFoundException(`Specified room not found`);
     }
 
-    const roomUser = await this.roomService.getRoomUserInRoom(userId, room.id);
+    const roomUser = await this.roomService.getRoomUser(userId, room.id);
 
     await this.roomService.removeUserFromRoom(userId, room);
 
