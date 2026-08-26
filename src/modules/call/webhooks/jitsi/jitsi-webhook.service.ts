@@ -205,7 +205,13 @@ export class JitsiWebhookService {
       await this.roomService.closeRoomIfHostLeft(room, userId);
 
       this.logger.log(
-        { userId, roomId, removedRoomUsers: deletedRows },
+        {
+          userId,
+          roomId,
+          removedRoomUsers: deletedRows,
+          room,
+          isOwner: userId === room.hostId,
+        },
         'Successfully processed PARTICIPANT_LEFT event',
       );
     } catch (error: unknown) {
