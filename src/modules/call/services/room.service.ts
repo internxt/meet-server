@@ -81,7 +81,7 @@ export class RoomService {
     const userAvatars = await this.getUserAvatars(users);
 
     return roomUsers.map((roomUser) => ({
-      id: roomUser.userId,
+      id: roomUser.id,
       name: roomUser.name,
       lastName: roomUser.lastName,
       anonymous: roomUser.anonymous,
@@ -129,6 +129,26 @@ export class RoomService {
     );
 
     return existingUser;
+  }
+
+  async getRoomUserInRoom(roomUserId: string, roomId: string) {
+    const roomUser = await this.roomUserRepository.findById(roomUserId);
+    return roomUser?.roomId === roomId ? roomUser : null;
+  }
+
+  async closeRoomIfHostLeft(room: Room, userId: string): Promise<void> {
+    if (userId !== room.hostId) {
+      return;
+    }
+
+    const remaining = await this.roomUserRepository.findUserInRoom(
+      userId,
+      room.id,
+    );
+
+    if (remaining.length === 0) {
+      await this.closeRoom(room.id);
+    }
   }
 
   async updateRoomUser(

@@ -202,12 +202,7 @@ export class JitsiWebhookService {
           webhookTimestamp,
         );
 
-      if (deletedRows > 0) {
-        const isOwner = userId === room.hostId;
-        if (isOwner) {
-          await this.roomService.closeRoom(roomId);
-        }
-      }
+      await this.roomService.closeRoomIfHostLeft(room, userId);
 
       this.logger.log(
         { userId, roomId, removedRoomUsers: deletedRows },
