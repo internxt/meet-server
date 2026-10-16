@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.11.0"
   },
   "scripts": {
     "build": "nest build",
@@ -71,7 +71,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.9",
-    "@types/node": "^24.19.2",
+    "@types/node": "~24.11.2",
     "@types/passport-jwt": "^4.0.1",
     "@types/sequelize": "^4.28.20",
     "@types/supertest": "^6.0.3",
