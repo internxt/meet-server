@@ -199,7 +199,7 @@ export class CallUseCase {
     await this.roomService.removeUserFromRoom(userId, room);
 
     if (roomUser) {
-      await this.roomService.closeRoomIfHostLeft(room, userId);
+      await this.roomService.closeRoomIfHostLeft(room, roomUser.userId);
     }
   }
 }

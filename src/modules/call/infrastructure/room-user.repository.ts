@@ -85,6 +85,17 @@ export class SequelizeRoomUserRepository {
     await this.roomUserModel.destroy({ where: { id: userId, roomId } });
   }
 
+  async deleteAllByUserIdAndRoomId(
+    userId: string,
+    roomId: string,
+    transaction?: Transaction,
+  ): Promise<void> {
+    await this.roomUserModel.destroy({
+      where: { userId, roomId },
+      transaction,
+    });
+  }
+
   async findByParticipantIdAndRoomId(
     participantId: string,
     roomId: string,

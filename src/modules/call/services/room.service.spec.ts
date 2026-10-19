@@ -580,5 +580,48 @@ describe('Room Service', () => {
         {},
       );
     });
+
+    it('When the user already has rows in the room, then it should remove them before creating the new one', async () => {
+      const userUuid = v4();
+      const roomId = v4();
+      const previousConnection = createMockRoomUser({
+        roomId,
+        userId: userUuid,
+        participantId: 'old-participant-id',
+      });
+      const newRoomUser = createMockRoomUser({ roomId, userId: userUuid });
+      const transaction = {};
+      jest
+        .spyOn(sequelize, 'transaction')
+        .mockImplementation(((cb: (t: object) => Promise<void>) =>
+          cb(transaction)) as never);
+      jest
+        .spyOn(roomUserRepository, 'findByUserIdAndRoomId')
+        .mockResolvedValueOnce(previousConnection);
+      jest
+        .spyOn(roomUserRepository, 'deleteAllByUserIdAndRoomId')
+        .mockResolvedValueOnce();
+      jest
+        .spyOn(roomUserRepository, 'create')
+        .mockResolvedValueOnce(newRoomUser);
+
+      const { roomUser, oldParticipantId } = await roomService.handleUserJoined(
+        userUuid,
+        roomId,
+        { name: 'John', lastName: 'Doe', anonymous: false },
+      );
+
+      expect(oldParticipantId).toBe('old-participant-id');
+      expect(roomUser).toEqual(newRoomUser);
+      expect(
+        roomUserRepository.deleteAllByUserIdAndRoomId,
+      ).toHaveBeenCalledWith(userUuid, roomId, transaction);
+      expect(
+        (roomUserRepository.deleteAllByUserIdAndRoomId as jest.Mock).mock
+          .invocationCallOrder[0],
+      ).toBeLessThan(
+        (roomUserRepository.create as jest.Mock).mock.invocationCallOrder[0],
+      );
+    });
   });
 });
