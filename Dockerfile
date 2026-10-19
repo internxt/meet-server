@@ -16,4 +16,4 @@ COPY --chown=1234:1234 . ./
 
 RUN yarn build
 
-CMD ["sh", "-c", "yarn start:prod"]
+CMD ["node", "dist/main"]
