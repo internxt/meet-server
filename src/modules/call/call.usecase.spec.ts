@@ -709,6 +709,36 @@ describe('CallUseCase', () => {
       expect(roomService.removeRoom).not.toHaveBeenCalled();
     });
 
+    it('When the host leaves using its room user id, then it should try to close the room with the host user id', async () => {
+      const hostRoomUser = new RoomUser({
+        id: v4(),
+        roomId,
+        userId: hostId,
+        name: 'Host',
+        anonymous: false,
+      });
+      roomService.getRoomUser.mockResolvedValueOnce(hostRoomUser);
+
+      await callUseCase.leaveCall(roomId, hostRoomUser.id);
+
+      expect(roomService.removeUserFromRoom).toHaveBeenCalledWith(
+        hostRoomUser.id,
+        roomMock,
+      );
+      expect(roomService.closeRoomIfHostLeft).toHaveBeenCalledWith(
+        roomMock,
+        hostId,
+      );
+    });
+
+    it('When the room user does not belong to the room, then it should not try to close it', async () => {
+      roomService.getRoomUser.mockResolvedValueOnce(null);
+
+      await callUseCase.leaveCall(roomId, v4());
+
+      expect(roomService.closeRoomIfHostLeft).not.toHaveBeenCalled();
+    });
+
     it('When user leaves a room, then it should remove user', async () => {
       await callUseCase.leaveCall(roomId, hostId);
 

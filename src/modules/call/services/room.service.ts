@@ -181,6 +181,12 @@ export class RoomService {
         oldParticipantId = existingUser.participantId;
       }
 
+      await this.roomUserRepository.deleteAllByUserIdAndRoomId(
+        userId,
+        roomId,
+        transaction,
+      );
+
       roomUser = await this.roomUserRepository.create(
         {
           roomId,
