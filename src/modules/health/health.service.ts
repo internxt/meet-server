@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Sequelize } from 'sequelize-typescript';
 import { AvatarService } from '../../externals/avatar/avatar.service';
 
-type CheckResult = { status: 'ok' | 'error' | 'unknown'; ping?: number; error?: string };
+type CheckResult = {
+  status: 'ok' | 'error' | 'unknown';
+  ping?: number;
+  error?: string;
+};
 type HealthPayload = {
   status: 'ok' | 'degraded';
   uptime: number;
@@ -14,7 +18,6 @@ type HealthPayload = {
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
-
   constructor(
     private readonly sequelize: Sequelize,
     private readonly avatarService: AvatarService,
