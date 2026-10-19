@@ -44,4 +44,7 @@ async function bootstrap() {
   await app.listen(APP_PORT ?? 3000);
 }
 
-bootstrap().catch(() => {});
+bootstrap().catch((error) => {
+  console.error('Failed to bootstrap application', error);
+  process.exit(1);
+});
