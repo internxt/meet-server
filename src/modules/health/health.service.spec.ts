@@ -17,7 +17,7 @@ describe('HealthService', () => {
       .compile();
 
     service = module.get<HealthService>(HealthService);
-    avatarService = module.get<DeepMocked<AvatarService>>(AvatarService)
+    avatarService = module.get<DeepMocked<AvatarService>>(AvatarService);
     sequelize = module.get<DeepMocked<Sequelize>>(Sequelize);
   });
 
@@ -34,13 +34,13 @@ describe('HealthService', () => {
         status: 'ok',
         db: {
           status: 'ok',
-          ping: expect.any(Number)
+          ping: expect.any(Number),
         },
         s3: {
           status: 'ok',
-          ping: 1
-        }
-      })
+          ping: 1,
+        },
+      });
     });
 
     it('When DB fails, then it marks degraded and retains S3', async () => {
@@ -55,9 +55,9 @@ describe('HealthService', () => {
         status: 'degraded',
         s3: {
           status: 'ok',
-          ping: 1
-        }
-      })
+          ping: 1,
+        },
+      });
     });
 
     it('When S3 fails, then it marks degraded and retains DB', async () => {
@@ -72,7 +72,7 @@ describe('HealthService', () => {
         status: 'degraded',
         db: {
           status: 'ok',
-          ping: expect.any(Number)
+          ping: expect.any(Number),
         },
       });
     });
