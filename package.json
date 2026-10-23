@@ -65,7 +65,7 @@
     "@nestjs/cli": "^11.0.19",
     "@nestjs/schematics": "^11.0.10",
     "@nestjs/testing": "^11.1.18",
-    "@swc/cli": "^0.7.10",
+    "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.18",
     "@types/chance": "^1.1.6",
     "@types/express": "^5.0.0",
@@ -93,18 +93,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "resolutions": {
-    "form-data": "^4.0.4",
-    "glob": "^11.1.0",
-    "test-exclude": "^7.0.1",
-    "fast-xml-parser": "^5.5.7",
-    "lodash": "^4.18.0",
-    "@smithy/config-resolver": "^4.4.0",
-    "qs": "^6.14.2",
-    "js-yaml": "^4.1.1",
-    "body-parser": "^2.2.1",
-    "sequelize-cli/**/minimatch": "9.0.7",
-    "file-type": "^21.3.2",
-    "flatted": "^3.4.2"
+    "@nestjs/swagger/js-yaml": "^5.4.1"
   },
   "jest": {
     "moduleFileExtensions": [
