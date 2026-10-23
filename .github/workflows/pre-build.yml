@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node_version: [24.11.0]
+        node_version: [24.22.1]
 
     steps:
       - name: Check Out Repo
