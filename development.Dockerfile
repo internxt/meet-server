@@ -1,4 +1,4 @@
-FROM node:24.22.1-alpine
+FROM node:24.22.1
 
 ENV YARN_CACHE_FOLDER=/usr/app/.yarn-cache
 ENV YARN_GLOBAL_FOLDER=/usr/app/.yarn-global

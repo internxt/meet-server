@@ -1,4 +1,4 @@
-FROM node:24.22.1-alpine
+FROM node:24.22.1
 LABEL author="internxt"
 
 ENV YARN_CACHE_FOLDER=/usr/app/.yarn-cache
